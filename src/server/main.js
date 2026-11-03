@@ -15,8 +15,11 @@ app.get('/:room/:player', (req, res) => res.send(`<script src="/socket.io/socket
                                                     const socket = io();
                                                     socket.emit('joinRoom', {room: '${req.params.room}', player: '${req.params.player}'});
                                                     socket.on('roomUpdate', (data) => {
-                                                        console.log(data)
-                                                    })
+                                                        console.log(data);
+                                                    });
+                                                    socket.on('joinError', (data) => {
+                                                        console.log(data);
+                                                    });
                                                   </script>`));
 
 const rooms = {};
@@ -40,6 +43,10 @@ io.on('connection', (socket) => {
     io.to(socket.data.room).emit('roomUpdate', rooms[socket.data.room]);
   })
   socket.on('joinRoom', (data) => {
+    if (rooms[data.room] && rooms[data.room].players.includes(data.player)) {
+        socket.emit('joinError', `Error: ${data.player} name already exists in ${data.room}`);
+        return;
+    }
     console.log(`player: ${data.player} wants to join: ${data.room}`);
     socket.join(data.room);
     socket.data.player = data.player;
