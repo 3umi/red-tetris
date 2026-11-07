@@ -22,7 +22,12 @@ app.get('/:room/:player', (req, res) => res.send(`<script src="/socket.io/socket
                                                     });
                                                   </script>`));
 
-const rooms = {};
+type Room = {
+  host: string;
+  players: string[];
+};
+
+const rooms : Record<string, Room> = {};
 
 io.on('connection', (socket) => {
   console.log('connected:', socket.id);
