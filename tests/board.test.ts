@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createBoard, isValid } from '../src/shared/board';
+import { createBoard, isValid, lockPiece } from '../src/shared/board';
 import { T } from '../src/shared/pieces'
 
 describe('createBoard', () => {
@@ -43,5 +43,20 @@ describe('isValid', () => {
     });
     it('is valid when only the empty row is below the floor', () => {
         expect(isValid(createBoard(), {shape: T, x: 0, y: 18})).toBe(true)
+    });
+})
+
+describe('lockPiece', () => {
+    it('writes the piece cells into the board', () => {
+        const board = lockPiece(createBoard(), {shape: T, x: 3, y: 18});
+        expect(board[18][4]).toBe(1);
+        expect(board[19][3]).toBe(1);
+        expect(board[19][4]).toBe(1);
+        expect(board[19][5]).toBe(1);
+    });
+    it('does not change the original board', () => {
+        const board = createBoard();
+        const newBoard = lockPiece(board, {shape: T, x: 3, y: 18});
+        expect(board).toEqual(createBoard());
     });
 })

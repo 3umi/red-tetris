@@ -28,4 +28,18 @@ export const isValid = (board: Board, piece: Piece): boolean => {
         }
     }
     return true;
-};
+}
+
+export const lockPiece = (board: Board, piece: Piece): Board => {
+    const newBoard = board.map((row) => [...row]);
+    const pieceSize = piece.shape.length;
+    for (let i = 0; i < pieceSize; i++) {
+        for (let j = 0; j < pieceSize; j++) {
+            if (piece.shape[i][j] === 0) {
+                continue;
+            }
+            newBoard[piece.y + i][piece.x + j] = 1;
+        }
+    }
+    return newBoard;
+}
