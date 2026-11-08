@@ -1,10 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { createBoard, isValid, lockPiece, clearLines, BOARD_WIDTH, BOARD_HEIGHT } from '../src/shared/board';
+import { createBoard, isValid, lockPiece, clearLines, emptyRow, fullRow, penaltyRow, addPenalty, BOARD_WIDTH, BOARD_HEIGHT } from '../src/shared/board';
 import { T } from '../src/shared/pieces';
-
-const emptyRow = () => Array(BOARD_WIDTH).fill(0);
-const fullRow = () => Array(BOARD_WIDTH).fill(1);
-const penaltyRow = () => Array(BOARD_WIDTH).fill(2);
 
 describe('createBoard', () => {
     it('has 20 rows', () => {
@@ -116,5 +112,50 @@ describe('clearLines', () => {
         const { board: newBoard, cleared} = clearLines(board);
         expect(cleared).toBe(1);
         expect(newBoard[19]).toEqual(penaltyRow());
+    });
+});
+
+describe('addPenalty', () => {
+    it('adds n penalty rows at the bottom', () => {
+        const {board} = addPenalty(createBoard(), 2);
+        expect(board[18]).toEqual(penaltyRow());
+        expect(board[19]).toEqual(penaltyRow());
+    });
+    it('pushes existing blocks up', () => {
+        const board = createBoard();
+        board[19][0] = 1;
+        const {board: newBoard} = addPenalty(board, 2);
+        expect(newBoard[17][0]).toBe(1);
+    });
+    it('keeps the board at 20 rows', () => {
+        const {board} = addPenalty(createBoard(), 2);
+        expect(board.length).toBe(BOARD_HEIGHT);
+    });
+    it('is not lost when the rows pushed off are empty', () => {
+        const {lost} = addPenalty(createBoard(), 2);
+        expect(lost).toBe(false);
+    });
+    it('is lost when a block is pushed off the top', () => {
+        const board = createBoard();
+        board[1][4] = 1;
+        const {lost} = addPenalty(board, 2);
+        expect(lost).toBe(true);
+    });
+    it('is not lost when a block reaches row 0 but stays on the board', () => {
+        const board = createBoard();
+        board[2][4] = 1;
+        const {board: newBoard, lost} = addPenalty(board, 2);
+        expect(newBoard[0][4]).toBe(1);
+        expect(lost).toBe(false);
+    });
+    it('changes nothing when n is 0', () => {
+        const {board, lost} = addPenalty(createBoard(), 0);
+        expect(board).toEqual(createBoard());
+        expect(lost).toBe(false);
+    });
+    it('does not change the original board', () => {
+        const board = createBoard();
+        addPenalty(board, 2);
+        expect(board).toEqual(createBoard());
     });
 });

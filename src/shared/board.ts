@@ -3,6 +3,10 @@ import type { Piece } from './pieces';
 export const BOARD_WIDTH = 10;
 export const BOARD_HEIGHT = 20;
 
+export const emptyRow = () => Array(BOARD_WIDTH).fill(0);
+export const fullRow = () => Array(BOARD_WIDTH).fill(1);
+export const penaltyRow = () => Array(BOARD_WIDTH).fill(2);
+
 export type Board = number[][];
 
 export const createBoard = (): Board => {
@@ -54,4 +58,14 @@ export const clearLines = (board: Board): { board: Board; cleared: number } => {
         newBoard.unshift(Array(board[0].length).fill(0));
     }
     return { board: newBoard, cleared };
+};
+
+export const addPenalty = (board: Board, n: number): { board: Board; lost: boolean } => {
+    const lostRows = board.slice(0, n);
+    const lost = lostRows.some((row) => row.some((cell) => cell !== 0));
+    const kept = board.slice(n);
+    for(let i = 0; i < n; i++) {
+        kept.push(penaltyRow());
+    }
+    return { board: kept, lost };
 };
