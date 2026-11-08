@@ -48,7 +48,7 @@ export const lockPiece = (board: Board, piece: Piece): Board => {
 };
 
 export const clearLines = (board: Board): { board: Board; cleared: number } => {
-    const newBoard = board.filter((row) => !row.every((cell) => cell !== 0));
+    const newBoard = board.filter((row) => !row.every((cell) => cell === 1));
     const cleared = board.length - newBoard.length;
     for (let i = 0; i < cleared; i++) {
         newBoard.unshift(Array(board[0].length).fill(0));

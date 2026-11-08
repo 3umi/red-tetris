@@ -4,6 +4,7 @@ import { T } from '../src/shared/pieces';
 
 const emptyRow = () => Array(BOARD_WIDTH).fill(0);
 const fullRow = () => Array(BOARD_WIDTH).fill(1);
+const penaltyRow = () => Array(BOARD_WIDTH).fill(2);
 
 describe('createBoard', () => {
     it('has 20 rows', () => {
@@ -107,5 +108,13 @@ describe('clearLines', () => {
         board[19] = fullRow();
         const { board: newBoard} = clearLines(board);
         expect(board[19]).toEqual(fullRow());
+    });
+    it('never clears a penalty row', () => {
+        const board = createBoard();
+        board[19] = penaltyRow();
+        board[18] = fullRow();
+        const { board: newBoard, cleared} = clearLines(board);
+        expect(cleared).toBe(1);
+        expect(newBoard[19]).toEqual(penaltyRow());
     });
 });
