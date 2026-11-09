@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createBoard, isValid, lockPiece, clearLines, emptyRow, fullRow, penaltyRow, addPenalty, BOARD_WIDTH, BOARD_HEIGHT } from '../src/shared/board';
-import { T } from '../src/shared/pieces';
+import { T, O, CELL } from '../src/shared/pieces';
 
 describe('createBoard', () => {
     it('has 20 rows', () => {
@@ -22,41 +22,46 @@ describe('createBoard', () => {
 
 describe('isValid', () => {
     it('is valid at the top of an empty board', () => {
-        expect(isValid(createBoard(), { shape: T, x: 0, y: 0 })).toBe(true);
+        expect(isValid(createBoard(), { type: 'T', shape: T, x: 0, y: 0 })).toBe(true);
     });
     it('is invalid one column past the left wall', () => {
-        expect(isValid(createBoard(), { shape: T, x: -1, y: 0 })).toBe(false);
+        expect(isValid(createBoard(), { type: 'T', shape: T, x: -1, y: 0 })).toBe(false);
     });
     it('is valid touching the right wall', () => {
-        expect(isValid(createBoard(), { shape: T, x: 7, y: 0 })).toBe(true);
+        expect(isValid(createBoard(), { type: 'T', shape: T, x: 7, y: 0 })).toBe(true);
     });
     it('is invalid one column past the right wall', () => {
-        expect(isValid(createBoard(), { shape: T, x: 8, y: 0 })).toBe(false);
+        expect(isValid(createBoard(), { type: 'T', shape: T, x: 8, y: 0 })).toBe(false);
     });
     it('is invalid one row below the floor', () => {
-        expect(isValid(createBoard(), { shape: T, x: 0, y: 19 })).toBe(false);
+        expect(isValid(createBoard(), { type: 'T', shape: T, x: 0, y: 19 })).toBe(false);
     });
     it('is invalid when overlapping a locked block', () => {
         const board = createBoard();
         board[1][1] = 1;
-        expect(isValid(board, { shape: T, x: 0, y: 0 })).toBe(false);
+        expect(isValid(board, { type: 'T', shape: T, x: 0, y: 0 })).toBe(false);
     });
     it('is valid when only the empty row is below the floor', () => {
-        expect(isValid(createBoard(), { shape: T, x: 0, y: 18 })).toBe(true);
+        expect(isValid(createBoard(), { type: 'T', shape: T, x: 0, y: 18 })).toBe(true);
     });
 });
 
 describe('lockPiece', () => {
     it('writes the piece cells into the board', () => {
-        const board = lockPiece(createBoard(), { shape: T, x: 3, y: 18 });
-        expect(board[18][4]).toBe(1);
-        expect(board[19][3]).toBe(1);
-        expect(board[19][4]).toBe(1);
-        expect(board[19][5]).toBe(1);
+        const board = lockPiece(createBoard(), { type: 'T', shape: T, x: 3, y: 18 });
+        expect(board[18][4]).toBe(CELL.T);
+        expect(board[19][3]).toBe(CELL.T);
+        expect(board[19][4]).toBe(CELL.T);
+        expect(board[19][5]).toBe(CELL.T);
+    });
+    it('writes the value of the piece type', () => {
+        const board = lockPiece(createBoard(), { type: 'O', shape: O, x: 0, y: 18 });
+        expect(board[19][0]).toBe(CELL.O);
+        expect(board[19][2]).toBe(0);
     });
     it('does not change the original board', () => {
         const board = createBoard();
-        lockPiece(board, { shape: T, x: 3, y: 18 });
+        lockPiece(board, { type: 'T', shape: T, x: 3, y: 18 });
         expect(board).toEqual(createBoard());
     });
 });
@@ -104,6 +109,13 @@ describe('clearLines', () => {
         board[19] = fullRow();
         const { board: newBoard} = clearLines(board);
         expect(board[19]).toEqual(fullRow());
+    });
+    it('clears a full row made of different piece types', () => {
+        const board = createBoard();
+        board[19] = [1, 2, 3, 4, 5, 6, 7, 1, 2, 3];
+        const { board: newBoard, cleared } = clearLines(board);
+        expect(cleared).toBe(1);
+        expect(newBoard[19]).toEqual(emptyRow());
     });
     it('never clears a penalty row', () => {
         const board = createBoard();

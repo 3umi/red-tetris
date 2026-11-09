@@ -1,18 +1,21 @@
-import type { Piece } from './pieces';
+import { CELL, type Piece } from './pieces';
 
 export const BOARD_WIDTH = 10;
 export const BOARD_HEIGHT = 20;
 
-export const emptyRow = () => Array(BOARD_WIDTH).fill(0);
-export const fullRow = () => Array(BOARD_WIDTH).fill(1);
-export const penaltyRow = () => Array(BOARD_WIDTH).fill(2);
+export const EMPTY = 0;
+export const PENALTY = 8;
+
+export const emptyRow = (): number[] => Array(BOARD_WIDTH).fill(EMPTY);
+export const fullRow = (): number[] => Array(BOARD_WIDTH).fill(CELL.I);
+export const penaltyRow = (): number[] => Array(BOARD_WIDTH).fill(PENALTY);
 
 export type Board = number[][];
 
 export const createBoard = (): Board => {
     const board: Board = [];
     for (let i = 0; i < BOARD_HEIGHT; i++) {
-        board.push(Array(BOARD_WIDTH).fill(0));
+        board.push(emptyRow());
     }
     return board;
 };
@@ -29,7 +32,7 @@ export const isValid = (board: Board, piece: Piece): boolean => {
             if (row < 0 || row >= board.length || col < 0 || col >= board[0].length) {
                 return false;
             }
-            if (board[row][col] !== 0) {
+            if (board[row][col] !== EMPTY) {
                 return false;
             }
         }
@@ -37,6 +40,7 @@ export const isValid = (board: Board, piece: Piece): boolean => {
     return true;
 };
 
+// The piece must already be valid on the board (see isValid).
 export const lockPiece = (board: Board, piece: Piece): Board => {
     const newBoard = board.map((row) => [...row]);
     const size = piece.shape.length;
@@ -45,24 +49,25 @@ export const lockPiece = (board: Board, piece: Piece): Board => {
             if (piece.shape[i][j] === 0) {
                 continue;
             }
-            newBoard[piece.y + i][piece.x + j] = 1;
+            newBoard[piece.y + i][piece.x + j] = CELL[piece.type];
         }
     }
     return newBoard;
 };
 
 export const clearLines = (board: Board): { board: Board; cleared: number } => {
-    const newBoard = board.filter((row) => !row.every((cell) => cell === 1));
+    const isFull = (row: number[]) => row.every((cell) => cell !== EMPTY && cell !== PENALTY);
+    const newBoard = board.filter((row) => !isFull(row));
     const cleared = board.length - newBoard.length;
     for (let i = 0; i < cleared; i++) {
-        newBoard.unshift(Array(board[0].length).fill(0));
+        newBoard.unshift(Array(board[0].length).fill(EMPTY));
     }
     return { board: newBoard, cleared };
 };
 
 export const addPenalty = (board: Board, n: number): { board: Board; lost: boolean } => {
     const lostRows = board.slice(0, n);
-    const lost = lostRows.some((row) => row.some((cell) => cell !== 0));
+    const lost = lostRows.some((row) => row.some((cell) => cell !== EMPTY));
     const kept = board.slice(n);
     for(let i = 0; i < n; i++) {
         kept.push(penaltyRow());
