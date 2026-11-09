@@ -10,19 +10,27 @@ app.get('/', (req, res) => {
    res.send('<h1> Red Tetris </h1>') 
 });
 
-app.get('/:room/:player', (req, res) => res.send(`<script src="/socket.io/socket.io.js"> </script>
-                                                  <script>
-                                                    const socket = io();
-                                                    socket.emit('joinRoom', {room: '${req.params.room}', player: '${req.params.player}'});
-                                                    socket.on('roomUpdate', (data) => {
-                                                        console.log(data);
-                                                    });
-                                                    socket.on('joinError', (data) => {
-                                                        console.log(data);
-                                                    });
-                                                  </script>`));
+app.get('/:room/:player', (req, res) => res.send(`
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const [, room, player] = location.pathname.split('/').map(decodeURIComponent);
+    const socket = io();
+    socket.emit('joinRoom', { room: room, player: player });
+    socket.on('roomUpdate', (data) => {
+      console.log(data);
+    });
+    socket.on('joinError', (data) => {
+      console.log(data);
+    });
+  </script>
+`));
 
-const rooms = {};
+type Room = {
+  host: string;
+  players: string[];
+};
+
+const rooms : Record<string, Room> = {};
 
 io.on('connection', (socket) => {
   console.log('connected:', socket.id);
