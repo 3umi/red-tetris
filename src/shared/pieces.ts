@@ -32,3 +32,12 @@ export const rotate = (shape : Shape): Shape => {
     }
     return rotatedShape;
 }
+
+export const createBag = (): PieceType[] => {
+    const pieces: PieceType[] = ['I', 'O', 'T', 'S', 'Z', 'J', 'L'];
+    for (let i = pieces.length - 1; i > 0; i--) {
+        const rand = Math.floor(Math.random() * (i + 1));
+        [pieces[i], pieces[rand]] = [pieces[rand], pieces[i]];
+    }
+    return pieces;
+};
