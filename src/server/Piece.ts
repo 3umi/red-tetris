@@ -9,7 +9,7 @@ export class Piece {
     
     get(index: number): PieceType {
         while (this.types.length < index + 1) {
-            this.types.push(...createBag());
+            this.types.push(...createBag(Math.random));
         }
         return this.types[index];
     }
