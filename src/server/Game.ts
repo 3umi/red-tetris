@@ -2,6 +2,7 @@ import { Piece } from './Piece';
 import { Player } from './Player';
 
 export type JoinError = 'nameTaken' | 'gameStarted';
+export type StartError = 'notHost' | 'alreadyStarted';
 
 export class Game {
     name: string;
@@ -45,6 +46,17 @@ export class Game {
         if (this.host === leaving.name) {
             this.host = this.players[0].name;
         }
+    }
+
+    start(name: string): StartError | null {
+        if (this.host !== name) {
+            return 'notHost';
+        }
+        if (this.started) {
+            return 'alreadyStarted';
+        }
+        this.started = true;
+        return null;
     }
 
     isEmpty(): boolean {

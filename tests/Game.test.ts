@@ -78,4 +78,26 @@ describe('Game', () => {
         expect(game.players.map((player) => player.name)).toEqual(['Alice', 'Bob']);
         expect(game.host).toBe('Alice');
     });
+
+    it('starts the game when the host starts it', () => {
+        const game = gameWith(['Alice', 'Bob']);
+        const error = game.start('Alice');
+        expect(game.started).toBe(true);
+        expect(error).toBe(null);
+    });
+
+    it('refuses to start when the player is not the host', () => {
+        const game = gameWith(['Alice', 'Bob']);
+        const error = game.start('Bob');
+        expect(game.started).toBe(false);
+        expect(error).toBe('notHost');
+    });
+
+    it('refuses to start a game that already started', () => {
+        const game = gameWith(['Alice', 'Bob']);
+        game.start('Alice');
+        const error = game.start('Alice');
+        expect(game.started).toBe(true);
+        expect(error).toBe('alreadyStarted');
+    });
 });
