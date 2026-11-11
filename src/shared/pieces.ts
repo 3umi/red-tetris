@@ -1,5 +1,7 @@
 export type Shape = number[][];
+export type PieceType = 'I' | 'O' | 'T' | 'S' | 'Z' | 'J' | 'L';
 export type Piece = {
+    type: PieceType,
     shape: Shape,
     x: number,
     y: number
@@ -13,8 +15,13 @@ export const Z: Shape = [[1,1,0], [0,1,1], [0,0,0]];
 export const J: Shape = [[1,0,0], [1,1,1], [0,0,0]];
 export const L: Shape = [[0,0,1], [1,1,1], [0,0,0]];
 
+export const SHAPES: Record<PieceType, Shape> = { I, O, T, S, Z, J, L };
+
+// The value a locked block of each type leaves on the board. 0 is empty, 8 is a penalty block.
+export const CELL: Record<PieceType, number> = { I: 1, O: 2, T: 3, S: 4, Z: 5, J: 6, L: 7 };
+
 export const rotate = (shape : Shape): Shape => {
-    let rotatedShape: Shape = [];
+    const rotatedShape: Shape = [];
     const size = shape.length
     for (let i = 0; i < size; i++) {
         const row: number[] = [];
