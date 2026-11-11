@@ -39,16 +39,14 @@ describe('piece types', () => {
 
 describe('createBag', () => {
     it('has 7 pieces', () => {
-        const bag = createBag();
+        const bag = createBag(Math.random);
         expect(bag.length).toBe(7);
     });
     it('contains each type exactly once', () => {
-        const bag = createBag();
+        const bag = createBag(Math.random);
         expect([...bag].sort()).toEqual(['I', 'J', 'L', 'O', 'S', 'T', 'Z']);
     });
-    it('returns a new array each time', () => {
-        const bag1 = createBag();
-        const bag2 = createBag();
-        expect(bag2).not.toBe(bag1);
+    it('deals a fixed order when random always returns 0', () => {
+        expect(createBag(() => 0)).toEqual(['O', 'T', 'S', 'Z', 'J', 'L', 'I']);
     });
 });

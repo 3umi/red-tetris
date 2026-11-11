@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { move, rotatePiece, createPiece, canSpawn } from '../src/shared/moves';
 import { createBoard } from '../src/shared/board';
-import { T, I, rotate, Piece, PieceType, SHAPES } from '../src/shared/pieces';
+import { T, I, rotate, type Piece, SHAPES } from '../src/shared/pieces';
 
 describe('move', () => {
     it('moves right in open space', () => {
