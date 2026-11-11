@@ -10,7 +10,7 @@ type Room = {
 const MAX_NAME_LENGTH = 32;
 
 const isValidName = (value: unknown): value is string =>
-  typeof value === 'string' && value.length > 0 && value.length <= MAX_NAME_LENGTH;
+  typeof value === 'string' && value.trim().length > 0 && value.length <= MAX_NAME_LENGTH;
 
 export const createApp = () => {
   const app = express();

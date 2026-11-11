@@ -74,6 +74,7 @@ describe('joinRoom', () => {
         ['a number room', { room: 1, player: 'alice' }],
         ['an empty name', { room: 'r', player: '' }],
         ['a name that is too long', { room: 'r', player: 'x'.repeat(33) }],
+        ['a whitespace-only name', { room: 'r', player: '   ' }],
     ])('rejects %s and keeps running', async (_, data) => {
         const a = await client();
         const error = next<string>(a, 'joinError');
