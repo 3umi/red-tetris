@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createBoard, isValid, lockPiece, clearLines, emptyRow, fullRow, penaltyRow, addPenalty, BOARD_WIDTH, BOARD_HEIGHT } from '../src/shared/board';
+import { createBoard, isValid, lockPiece, clearLines, emptyRow, fullRow, penaltyRow, addPenalty, getSpectrum, BOARD_WIDTH, BOARD_HEIGHT } from '../src/shared/board';
 import { T, O, CELL } from '../src/shared/pieces';
 
 describe('createBoard', () => {
@@ -169,5 +169,39 @@ describe('addPenalty', () => {
         const board = createBoard();
         addPenalty(board, 2);
         expect(board).toEqual(createBoard());
+    });
+});
+
+describe('getSpectrum', () => {
+    it('is all zeros for an empty board', () => {
+        const board = createBoard();
+        const heights = getSpectrum(board);
+        expect(heights).toEqual(Array(BOARD_WIDTH).fill(0));
+    });
+    it('gives the height of a single block on the floor', () => {
+        const board = createBoard();
+        board[19][0] = 1;
+        const heights = getSpectrum(board);
+        expect(heights[0]).toBe(1);
+    });
+    it('uses the highest block and ignores holes below it', () => {
+        const board = createBoard();
+        board[15][0] = 1;
+        board[19][0] = 1;
+        const heights = getSpectrum(board);
+        expect(heights[0]).toBe(5);
+    });
+    it('counts penalty rows', () => {
+        const board = createBoard();
+        board[19] = penaltyRow();
+        const heights = getSpectrum(board);
+        expect(heights).toEqual(Array(BOARD_WIDTH).fill(1));
+
+    });
+    it('gives 20 for a block on the top row', () => {
+        const board = createBoard();
+        board[0][9] = 1;
+        const heights = getSpectrum(board);
+        expect(heights[9]).toBe(20);
     });
 });

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { move, rotatePiece } from '../src/shared/moves';
+import { move, rotatePiece, createPiece, canSpawn } from '../src/shared/moves';
 import { createBoard } from '../src/shared/board';
-import { T, I, rotate, type Piece } from '../src/shared/pieces';
+import { T, I, rotate, type Piece, SHAPES } from '../src/shared/pieces';
 
 describe('move', () => {
     it('moves right in open space', () => {
@@ -35,5 +35,49 @@ describe('rotatePiece', () => {
         const piece: Piece = {type: 'I', shape: rotate(I), x: 7, y: 0};
         const newPiece = rotatePiece(createBoard(), piece);
         expect(newPiece).toEqual(piece);
+    });
+});
+
+describe('createPiece', () => {
+    it('builds the shape from the type', () => {
+        const piece = createPiece('T');
+        expect(piece.shape).toEqual([[0,1,0], [1,1,1], [0,0,0]]);
+    });
+    it('centres a 3-wide piece at x 3', () => {
+        const piece = createPiece('T');
+        expect(piece.x).toBe(3);
+        expect(piece.y).toBe(0);
+    });
+    it('centres the I piece at x 3', () => {
+        const piece = createPiece('I');
+        expect(piece.x).toBe(3);
+        expect(piece.y).toBe(0);
+    });
+    it('centres the O piece at x 4', () => {
+        const piece = createPiece('O');
+        expect(piece.x).toBe(4);
+        expect(piece.y).toBe(0);
+    });
+    it('gives each piece its own copy of the shape', () => {
+        const piece = createPiece('T');
+        piece.shape[0][0] = 9;
+        expect(SHAPES.T[0][0]).toBe(0);
+    });
+});
+  
+describe('canSpawn', () => {
+    it('is true on an empty board', () => {
+        const board = createBoard();
+        expect(canSpawn(board, createPiece('T'))).toBe(true);
+    });
+    it('is false when a block sits where the piece appears', () => {
+        const board = createBoard();
+        board[0][4] = 1;
+        expect(canSpawn(board, createPiece('T'))).toBe(false);
+    });
+    it('is true when blocks are only outside the spawn area', () => {
+        const board = createBoard();
+        board[0][3] = 1;
+        expect(canSpawn(board, createPiece('T'))).toBe(true);
     });
 });

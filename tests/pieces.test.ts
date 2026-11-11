@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { rotate, T, O, SHAPES, CELL } from '../src/shared/pieces';
+import { rotate, T, O, createBag, SHAPES, CELL } from '../src/shared/pieces';
 
 describe('rotate', () => {
     it('rotate give the turn 1 grid', () => {
@@ -34,5 +34,19 @@ describe('piece types', () => {
             expect(value).toBeGreaterThan(0);
             expect(value).not.toBe(8);
         });
+    });
+});
+
+describe('createBag', () => {
+    it('has 7 pieces', () => {
+        const bag = createBag(Math.random);
+        expect(bag.length).toBe(7);
+    });
+    it('contains each type exactly once', () => {
+        const bag = createBag(Math.random);
+        expect([...bag].sort()).toEqual(['I', 'J', 'L', 'O', 'S', 'T', 'Z']);
+    });
+    it('deals a fixed order when random always returns 0', () => {
+        expect(createBag(() => 0)).toEqual(['O', 'T', 'S', 'Z', 'J', 'L', 'I']);
     });
 });

@@ -74,3 +74,18 @@ export const addPenalty = (board: Board, n: number): { board: Board; lost: boole
     }
     return { board: kept, lost };
 };
+
+export const getSpectrum = (board: Board): number[] => {
+    const heights: number[] = [];
+    for (let col = 0; col < board[0].length; col++) {
+        let height = 0;
+        for (let row = 0; row < board.length; row++) {
+            if (board[row][col] !== EMPTY) {
+                height = board.length - row;
+                break;
+            }
+        }
+        heights.push(height);
+    }
+    return heights;
+};
