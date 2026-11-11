@@ -13,7 +13,7 @@ export const rotatePiece = (board: Board, piece: Piece): Piece => {
 
 export const createPiece = (type: PieceType): Piece => {
     const size = SHAPES[type].length;
-    return {type, shape: SHAPES[type], x:Math.floor((BOARD_WIDTH - size) / 2), y: 0};
+    return {type, shape: SHAPES[type].map((row) => [...row]), x: Math.floor((BOARD_WIDTH - size) / 2), y: 0};
 };
 
 export const canSpawn = (board: Board, piece: Piece): boolean => {

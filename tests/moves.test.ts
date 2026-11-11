@@ -58,6 +58,11 @@ describe('createPiece', () => {
         expect(piece.x).toBe(4);
         expect(piece.y).toBe(0);
     });
+    it('gives each piece its own copy of the shape', () => {
+        const piece = createPiece('T');
+        piece.shape[0][0] = 9;
+        expect(SHAPES.T[0][0]).toBe(0);
+    });
 });
   
 describe('canSpawn', () => {
