@@ -59,6 +59,22 @@ export class Game {
         return null;
     }
 
+    isOver(): boolean {
+        const alive = this.players.filter((player) => player.alive).length;
+        if (this.players.length > 1 && alive === 1) {
+            return true;
+        }
+        return alive === 0;
+    }
+
+    winner(): string | null {
+        const alive = this.players.filter((player) => player.alive);
+        if (this.players.length > 1 && alive.length === 1) {
+            return alive[0].name;
+        }
+        return null;
+    }
+
     isEmpty(): boolean {
         return (this.players.length === 0);
     }

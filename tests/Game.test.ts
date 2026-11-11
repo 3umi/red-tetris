@@ -100,4 +100,40 @@ describe('Game', () => {
         expect(game.started).toBe(true);
         expect(error).toBe('alreadyStarted');
     });
+
+    it('is not over while several players are alive', () => {
+        const game = gameWith(['Alice', 'Bob', 'Sara']);
+        game.players[0].lose();
+        expect(game.isOver()).toBe(false);
+        expect(game.winner()).toBe(null);
+    });
+
+    it('is over when one player is left, and that player wins', () => {
+        const game = gameWith(['Alice', 'Bob', 'Sara']);
+        game.players[0].lose();
+        game.players[2].lose();
+        expect(game.isOver()).toBe(true);
+        expect(game.winner()).toBe('Bob');
+    });
+
+    it('is over with no winner when the last players lose together', () => {
+        const game = gameWith(['Alice', 'Bob']);
+        game.players[0].lose();
+        game.players[1].lose();
+        expect(game.isOver()).toBe(true);
+        expect(game.winner()).toBe(null);
+    });
+
+    it('is not over while a solo player is alive', () => {
+        const game = gameWith(['Alice']);
+        expect(game.isOver()).toBe(false);
+        expect(game.winner()).toBe(null);
+    });
+
+    it('is over with no winner when a solo player loses', () => {
+        const game = gameWith(['Alice']);
+        game.players[0].lose();
+        expect(game.isOver()).toBe(true);
+        expect(game.winner()).toBe(null);
+    });
 });
