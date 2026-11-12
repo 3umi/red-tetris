@@ -153,10 +153,11 @@ describe('Game', () => {
     it('marks the player as lost and keeps the round going', () => {
         const game = gameWith(['Alice', 'Bob', 'Sara']);
         game.start('id1');
-        game.playerLost('id2');
+        const counted = game.playerLost('id2');
         expect(game.players[1].alive).toBe(false);
         expect(game.started).toBe(true);
         expect(game.lost).toEqual(['Bob']);
+        expect(counted).toBe(true);
     });
 
     it('ends the round and saves the winner when one player is left', () => {
@@ -205,8 +206,9 @@ describe('Game', () => {
         const game = gameWith(['Alice', 'Bob']);
         game.start('id1');
         game.playerLost('id2');
-        game.playerLost('id2');
+        const counted = game.playerLost('id2');
         expect(game.lost).toEqual(['Bob']);
+        expect(counted).toBe(false);
     });
 
     it('resets players and the round when the host starts again', () => {

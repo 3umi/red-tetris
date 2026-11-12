@@ -48,18 +48,26 @@ export const createApp = () => {
 `));
 
   io.on('connection', (socket) => {
+    const currentGame = (): Game | undefined => {
+      const roomName = socket.data.room;
+      return roomName === undefined ? undefined : rooms.get(roomName);
+    };
+
     socket.on('disconnect', () => {
-      const roomName: string | undefined = socket.data.room;
-      const game = roomName === undefined ? undefined : rooms.get(roomName);
-      if (!roomName || !game) {
+      const game = currentGame();
+      if (!game) {
         return;
       }
+      const wasPlaying = game.started;
       game.removePlayer(socket.id);
       if (game.isEmpty()) {
-        rooms.delete(roomName);
+        rooms.delete(game.name);
         return;
       }
-      io.to(roomName).emit('roomUpdate', toRoomUpdate(game));
+      io.to(game.name).emit('roomUpdate', toRoomUpdate(game));
+      if (wasPlaying && !game.started) {
+        io.to(game.name).emit('gameOver', { winner: game.lastWinner, lost: game.lost });
+      }
     });
 
     socket.on('joinRoom', (data: unknown) => {
@@ -88,16 +96,31 @@ export const createApp = () => {
     });
 
     socket.on('startGame', () => {
-      const roomName: string | undefined = socket.data.room;
-      const game = roomName === undefined ? undefined : rooms.get(roomName);
-      if (!roomName || !game) {
+      const game = currentGame();
+      if (!game) {
         return;
       }
       const error = game.start(socket.id);
       if (error) {
         return;
       }
-      io.to(roomName).emit('gameStarted', { pieces: piecesFrom(game, 0) });
+      io.to(game.name).emit('gameStarted', { pieces: piecesFrom(game, 0) });
+    });
+
+    socket.on('lost', () => {
+      const game = currentGame();
+      if (!game) {
+        return;
+      }
+      const counted = game.playerLost(socket.id);
+      if (!counted) {
+        return;
+      }
+      const name = game.lost[game.lost.length - 1];
+      io.to(game.name).emit('playerOut', { name });
+      if (!game.started) {
+        io.to(game.name).emit('gameOver', { winner: game.lastWinner, lost: game.lost });
+      }
     });
   });
 

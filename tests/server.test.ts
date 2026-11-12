@@ -158,4 +158,32 @@ describe('disconnect', () => {
             expect(server.rooms.get('r')?.started).toBe(false);
         });
     });
+    describe('lost', () => {
+        it('tells the room who is out and who won', async () => {
+            const a = await client();
+            const b = await client();
+            await join(a, 'r', 'alice');
+            await join(b, 'r', 'bob');
+            const started = next(a, 'gameStarted');
+            a.emit('startGame');
+            await started;
+            const out = next<{ name: string }>(a, 'playerOut');
+            const over = next<{ winner: string | null; lost: string[] }>(a, 'gameOver');
+            b.emit('lost');
+            expect(await out).toEqual({ name: 'bob' });
+            expect(await over).toEqual({ winner: 'alice', lost: ['bob'] });
+        });
+        it('ends the round when the opponent disconnects', async () => {
+            const a = await client();
+            const b = await client();
+            await join(a, 'r', 'alice');
+            await join(b, 'r', 'bob');
+            const started = next(a, 'gameStarted');
+            a.emit('startGame');
+            await started;
+            const over = next<{ winner: string | null; lost: string[] }>(a, 'gameOver');
+            b.disconnect();
+            expect(await over).toEqual({ winner: 'alice', lost: [] });
+        });
+    });
 });
