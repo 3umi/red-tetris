@@ -1,23 +1,24 @@
 import express from 'express';
 import { createServer } from 'node:http';
 import { Server } from 'socket.io';
-
-type Room = {
-  host: string;
-  players: string[];
-};
+import { Game } from './Game';
+import { Player } from './Player';
 
 const MAX_NAME_LENGTH = 32;
 
 const isValidName = (value: unknown): value is string =>
   typeof value === 'string' && value.trim().length > 0 && value.length <= MAX_NAME_LENGTH;
 
+const toRoomUpdate = (game: Game) => ({
+  host: game.players.find((player) => player.id === game.host)?.name,
+  players: game.players.map((player) => player.name),
+});
+
 export const createApp = () => {
   const app = express();
   const httpServer = createServer(app);
   const io = new Server(httpServer);
-  // A Map, not a plain object, so room names like "toString" or "__proto__" are just names.
-  const rooms = new Map<string, Room>();
+  const rooms = new Map<string, Game>();
 
   app.get('/', (req, res) => {
     res.send('<h1> Red Tetris </h1>');
@@ -41,19 +42,16 @@ export const createApp = () => {
   io.on('connection', (socket) => {
     socket.on('disconnect', () => {
       const roomName: string | undefined = socket.data.room;
-      const room = roomName === undefined ? undefined : rooms.get(roomName);
-      if (!roomName || !room) {
+      const game = roomName === undefined ? undefined : rooms.get(roomName);
+      if (!roomName || !game) {
         return;
       }
-      room.players = room.players.filter((name) => name !== socket.data.player);
-      if (room.players.length === 0) {
+      game.removePlayer(socket.id);
+      if (game.isEmpty()) {
         rooms.delete(roomName);
         return;
       }
-      if (room.host === socket.data.player) {
-        room.host = room.players[0];
-      }
-      io.to(roomName).emit('roomUpdate', room);
+      io.to(roomName).emit('roomUpdate', toRoomUpdate(game));
     });
 
     socket.on('joinRoom', (data: unknown) => {
@@ -66,20 +64,19 @@ export const createApp = () => {
         socket.emit('joinError', `Error: you are already in ${socket.data.room}`);
         return;
       }
-      const room = rooms.get(roomName);
-      if (room && room.players.includes(player)) {
-        socket.emit('joinError', `Error: ${player} name already exists in ${roomName}`);
+      const game = rooms.get(roomName) ?? new Game(roomName);
+      const error = game.addPlayer(player, socket.id);
+      if (error) {
+        const message = error === 'nameTaken'
+              ? `Error: ${player} name already exists in ${roomName}`
+              : `Error: ${roomName} has already started`;
+        socket.emit('joinError', message);
         return;
       }
+      rooms.set(roomName, game);
       socket.join(roomName);
-      socket.data.player = player;
       socket.data.room = roomName;
-      if (room) {
-        room.players.push(player);
-      } else {
-        rooms.set(roomName, { host: player, players: [player] });
-      }
-      io.to(roomName).emit('roomUpdate', rooms.get(roomName));
+      io.to(roomName).emit('roomUpdate', toRoomUpdate(game));
     });
   });
 

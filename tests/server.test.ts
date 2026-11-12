@@ -68,6 +68,15 @@ describe('joinRoom', () => {
         b.emit('joinRoom', { room: 'r', player: 'alice' });
         expect(await error).toContain('already exists');
     });
+    it('rejects joining a room whose game has started', async () => {
+        const a = await client();
+        await join(a, 'r', 'alice');
+        server.rooms.get('r')?.start(a.id!);
+        const b = await client();
+        const error = next<string>(b, 'joinError');
+        b.emit('joinRoom', { room: 'r', player: 'bob' });
+        expect(await error).toContain('already started');
+    });
     it.each([
         ['null', null],
         ['no fields', {}],
