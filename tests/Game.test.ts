@@ -150,6 +150,16 @@ describe('Game', () => {
         expect(game.winner()).toBe('Alice');
     });
 
+    it('is not over in the lobby after a restart', () => {
+        const game = gameWith(['Alice', 'Bob']);
+        game.start('Alice');
+        game.players[1].lose();
+        game.restart('Alice');
+        game.removePlayer('id2');
+        expect(game.isOver()).toBe(false);
+        expect(game.winner()).toBe(null);
+    });
+
     it('refuses to restart when the player is not the host', () => {
         const game = gameWith(['Alice', 'Bob']);
         game.start('Alice');

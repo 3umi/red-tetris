@@ -64,6 +64,9 @@ export class Game {
     }
 
     isOver(): boolean {
+        if (!this.started) {
+            return false;
+        }
         const alive = this.players.filter((player) => player.alive).length;
         if (this.multiplayer && alive === 1) {
             return true;
@@ -72,6 +75,9 @@ export class Game {
     }
 
     winner(): string | null {
+        if (!this.started) {
+            return null;
+        }
         const alive = this.players.filter((player) => player.alive);
         if (this.multiplayer && alive.length === 1) {
             return alive[0].name;
