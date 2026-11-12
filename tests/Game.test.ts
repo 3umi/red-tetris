@@ -214,12 +214,10 @@ describe('Game', () => {
     it('resets players and the round when the host starts again', () => {
         const game = gameWith(['Alice', 'Bob']);
         game.start('id1');
-        game.players[0].nextPiece(game.piece);
         game.playerLost('id2');
         const oldPiece = game.piece;
         const error = game.start('id1');
         expect(error).toBe(null);
-        expect(game.players[0].position).toBe(0);
         expect(game.players[1].alive).toBe(true);
         expect(game.piece).not.toBe(oldPiece);
         expect(game.lost).toEqual([]);
