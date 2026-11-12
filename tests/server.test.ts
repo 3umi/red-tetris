@@ -213,4 +213,39 @@ describe('disconnect', () => {
             expect(server.rooms.get('r')?.piece.types.length).toBe(7);
         });
     });
+    describe('boardChanged', () => {
+        const heights = [0, 2, 5, 5, 3, 0, 0, 1, 4, 20];
+    
+        it('sends a spectrum to the other players', async () => {
+            const a = await client();
+            const b = await client();
+            await join(a, 'r', 'alice');
+            await join(b, 'r', 'bob');
+            const started = next(b, 'gameStarted');
+            a.emit('startGame');
+            await started;
+            const seen = next<{ name: string; spectrum: number[] }>(a, 'spectrum');
+            b.emit('boardChanged', { spectrum: heights });
+            expect(await seen).toEqual({ name: 'bob', spectrum: heights });
+        });
+        it.each([
+            ['too few columns', [0, 2, 5]],
+            ['a column above the board', [0, 2, 5, 5, 3, 0, 0, 1, 4, 21]],
+            ['a negative height', [0, 2, 5, 5, 3, 0, 0, 1, 4, -1]],
+            ['a fraction', [0, 2.5, 5, 5, 3, 0, 0, 1, 4, 2]],
+            ['not an array', 'hello'],
+        ])('ignores a spectrum with %s', async (_, bad) => {
+            const a = await client();
+            const b = await client();
+            await join(a, 'r', 'alice');
+            await join(b, 'r', 'bob');
+            const started = next(b, 'gameStarted');
+            a.emit('startGame');
+            await started;
+            const seen = next<{ name: string; spectrum: number[] }>(a, 'spectrum');
+            b.emit('boardChanged', { spectrum: bad });
+            b.emit('boardChanged', { spectrum: heights });
+            expect(await seen).toEqual({ name: 'bob', spectrum: heights });
+        });
+    });
 });

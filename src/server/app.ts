@@ -3,6 +3,7 @@ import { createServer } from 'node:http';
 import { Server } from 'socket.io';
 import { Game } from './Game';
 import type { PieceType } from '../shared/pieces';
+import { BOARD_WIDTH, BOARD_HEIGHT } from '../shared/board';
 
 const MAX_NAME_LENGTH = 32;
 
@@ -21,6 +22,9 @@ const piecesFrom = (game: Game, from: number): PieceType[] => {
   }
   return pieces;
 };
+
+const isSpectrum = (value: unknown): value is number[] =>
+  Array.isArray(value) && value.length === BOARD_WIDTH && value.every((height) => Number.isInteger(height) && height >= 0 && height <= BOARD_HEIGHT);
 
 export const createApp = () => {
   const app = express();
@@ -133,6 +137,22 @@ export const createApp = () => {
         return;
       }
       socket.emit('pieces', { pieces: piecesFrom(game, from) });
+    });
+    
+    socket.on('boardChanged', (data: unknown) => {
+      const game = currentGame();
+      if (!game || !game.started) {
+        return;
+      }
+      const sender = game.players.find((player) => player.id === socket.id);
+      if (!sender || !sender.alive) {
+        return;
+      }
+      const { spectrum } = (data ?? {}) as { spectrum?: unknown };
+      if (!isSpectrum(spectrum)) {
+        return;
+      }
+      socket.to(game.name).emit('spectrum', { name: sender.name, spectrum });
     });
   });
 
