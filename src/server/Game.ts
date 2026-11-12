@@ -12,6 +12,8 @@ export class Game {
     started: boolean;
     multiplayer: boolean;
     piece: Piece;
+    lost: string[];
+    lastWinner: string | null;
 
     constructor(name: string) {
         this.name = name;
@@ -20,6 +22,8 @@ export class Game {
         this.started = false;
         this.multiplayer = false;
         this.piece = new Piece();
+        this.lost = [];
+        this.lastWinner = null;
     }
 
     addPlayer(name: string, id: string): JoinError | null {
@@ -35,13 +39,14 @@ export class Game {
         }
         return null;
     }
-
+    
     removePlayer(id: string): void {
         const leaving = this.players.find((player) => player.id === id);
         if (!leaving) {
             return;
         }
         this.players = this.players.filter((player) => player.id !== id);
+        this.endRoundIfOver();
         if (!this.players.length) {
             this.host = null;
             return;
@@ -50,7 +55,7 @@ export class Game {
             this.host = this.players[0].name;
         }
     }
-
+    
     start(name: string): StartError | null {
         if (this.host !== name) {
             return 'notHost';
@@ -62,7 +67,20 @@ export class Game {
         this.started = true;
         return null;
     }
-
+    
+    playerLost(id: string): void {
+        if (!this.started) {
+            return;
+        }
+        const loser = this.players.find((player) => player.id === id);
+        if (!loser || !loser.alive) {
+            return;
+        }
+        loser.lose();
+        this.lost.push(loser.name);
+        this.endRoundIfOver();
+    }
+    
     isOver(): boolean {
         if (!this.started) {
             return false;
@@ -73,7 +91,7 @@ export class Game {
         }
         return alive === 0;
     }
-
+    
     winner(): string | null {
         if (!this.started) {
             return null;
@@ -84,7 +102,7 @@ export class Game {
         }
         return null;
     }
-
+    
     restart(name: string): RestartError | null {
         if (this.host !== name) {
             return 'notHost';
@@ -97,8 +115,15 @@ export class Game {
         this.piece = new Piece();
         return null;
     }
-
+    
     isEmpty(): boolean {
         return (this.players.length === 0);
+    }
+
+    private endRoundIfOver(): void {
+        if (this.isOver()) {
+            this.lastWinner = this.winner();
+            this.started = false;
+        }
     }
 }

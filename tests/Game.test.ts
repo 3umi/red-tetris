@@ -38,7 +38,7 @@ describe('Game', () => {
 
     it('refuses to add players once started', () => {
         const game = gameWith(['Alice', 'Bob']);
-        game.start('Alice')
+        game.start('Alice');
         const error = game.addPlayer('Sara', 'id3');
         expect(error).toBe('gameStarted');
         expect(game.players.length).toBe(2);
@@ -146,8 +146,67 @@ describe('Game', () => {
         const game = gameWith(['Alice', 'Bob']);
         game.start('Alice');
         game.removePlayer('id2');
-        expect(game.isOver()).toBe(true);
-        expect(game.winner()).toBe('Alice');
+        expect(game.started).toBe(false);
+        expect(game.lastWinner).toBe('Alice');
+    });
+
+    it('marks the player as lost and keeps the round going', () => {
+        const game = gameWith(['Alice', 'Bob', 'Sara']);
+        game.start('Alice');
+        game.playerLost('id2');
+        expect(game.players[1].alive).toBe(false);
+        expect(game.started).toBe(true);
+        expect(game.lost).toEqual(['Bob']);
+    });
+
+    it('ends the round and saves the winner when one player is left', () => {
+        const game = gameWith(['Alice', 'Bob']);
+        game.start('Alice');
+        game.playerLost('id2');
+        expect(game.started).toBe(false);
+        expect(game.lastWinner).toBe('Alice');
+    });
+
+    it('records players in the order they lost', () => {
+        const game = gameWith(['Alice', 'Bob', 'Sara']);
+        game.start('Alice');
+        game.playerLost('id1');
+        game.playerLost('id3');
+        expect(game.lastWinner).toBe('Bob');
+        expect(game.lost).toEqual(['Alice', 'Sara']);
+    });
+
+    it('ends a solo round with no winner', () => {
+        const game = gameWith(['Alice']);
+        game.start('Alice');
+        game.playerLost('id1');
+        expect(game.started).toBe(false);
+        expect(game.lastWinner).toBe(null);
+    });
+
+    it('lets a new player join after the round ends', () => {
+        const game = gameWith(['Alice', 'Bob']);
+        game.start('Alice');
+        game.playerLost('id2');
+        const error = game.addPlayer('Sara', 'id3');
+        expect(error).toBe(null);
+        expect(game.players.length).toBe(3);
+        expect(game.started).toBe(false);
+    });
+
+    it('ignores a loss outside a round', () => {
+        const game = gameWith(['Alice', 'Bob']);
+        game.playerLost('id1');
+        expect(game.players[0].alive).toBe(true);
+        expect(game.lost).toEqual([]);
+    });
+
+    it('ignores a second loss from the same player', () => {
+        const game = gameWith(['Alice', 'Bob']);
+        game.start('Alice');
+        game.playerLost('id2');
+        game.playerLost('id2');
+        expect(game.lost).toEqual(['Bob']);
     });
 
     it('is not over in the lobby after a restart', () => {
