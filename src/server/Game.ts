@@ -71,17 +71,18 @@ export class Game {
         return null;
     }
     
-    playerLost(id: string): void {
+    playerLost(id: string): boolean {
         if (!this.started) {
-            return;
+            return false;
         }
         const loser = this.players.find((player) => player.id === id);
         if (!loser || !loser.alive) {
-            return;
+            return false;
         }
         loser.lose();
         this.lost.push(loser.name);
         this.endRoundIfOver();
+        return true;
     }
     
     isOver(): boolean {

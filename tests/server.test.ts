@@ -68,6 +68,15 @@ describe('joinRoom', () => {
         b.emit('joinRoom', { room: 'r', player: 'alice' });
         expect(await error).toContain('already exists');
     });
+    it('rejects joining a room whose game has started', async () => {
+        const a = await client();
+        await join(a, 'r', 'alice');
+        server.rooms.get('r')?.start(a.id!);
+        const b = await client();
+        const error = next<string>(b, 'joinError');
+        b.emit('joinRoom', { room: 'r', player: 'bob' });
+        expect(await error).toContain('already started');
+    });
     it.each([
         ['null', null],
         ['no fields', {}],
@@ -125,5 +134,175 @@ describe('disconnect', () => {
         const a = await client();
         a.disconnect();
         expect(await join(await client(), 'r', 'alice')).toEqual({ host: 'alice', players: ['alice'] });
+    });
+    describe('startGame', () => {
+        it('starts the round for everyone when the host starts', async () => {
+            const a = await client();
+            const b = await client();
+            await join(a, 'r', 'alice');
+            await join(b, 'r', 'bob');
+            const started = next<{ pieces: string[] }>(b, 'gameStarted');
+            a.emit('startGame');
+            const { pieces } = await started;
+            expect([...pieces].sort()).toEqual(['I', 'J', 'L', 'O', 'S', 'T', 'Z']);
+        });
+        it('ignores startGame from a player who is not the host', async () => {
+            const a = await client();
+            const b = await client();
+            await join(a, 'r', 'alice');
+            await join(b, 'r', 'bob');
+            const error = next<string>(b, 'joinError');
+            b.emit('startGame');
+            b.emit('joinRoom', { room: 'r', player: 'bob' });
+            await error;
+            expect(server.rooms.get('r')?.started).toBe(false);
+        });
+    });
+    describe('lost', () => {
+        it('tells the room who is out and who won', async () => {
+            const a = await client();
+            const b = await client();
+            await join(a, 'r', 'alice');
+            await join(b, 'r', 'bob');
+            const started = next(a, 'gameStarted');
+            a.emit('startGame');
+            await started;
+            const out = next<{ name: string }>(a, 'playerOut');
+            const over = next<{ winner: string | null; lost: string[] }>(a, 'gameOver');
+            b.emit('lost');
+            expect(await out).toEqual({ name: 'bob' });
+            expect(await over).toEqual({ winner: 'alice', lost: ['bob'] });
+        });
+        it('ends the round when the opponent disconnects', async () => {
+            const a = await client();
+            const b = await client();
+            await join(a, 'r', 'alice');
+            await join(b, 'r', 'bob');
+            const started = next(a, 'gameStarted');
+            a.emit('startGame');
+            await started;
+            const over = next<{ winner: string | null; lost: string[] }>(a, 'gameOver');
+            b.disconnect();
+            expect(await over).toEqual({ winner: 'alice', lost: [] });
+        });
+    });
+    describe('requestPieces', () => {
+        it('sends the next pieces to the player who asks', async () => {
+            const a = await client();
+            const b = await client();
+            await join(a, 'r', 'alice');
+            await join(b, 'r', 'bob');
+            const started = next(b, 'gameStarted');
+            a.emit('startGame');
+            await started;
+            const answer = next<{ pieces: string[] }>(b, 'pieces');
+            b.emit('requestPieces', { from: 7 });
+            const { pieces } = await answer;
+            expect([...pieces].sort()).toEqual(['I', 'J', 'L', 'O', 'S', 'T', 'Z']);
+        });
+        it('ignores a request far ahead of the dealt pieces', async () => {
+            const a = await client();
+            await join(a, 'r', 'alice');
+            const started = next(a, 'gameStarted');
+            a.emit('startGame');
+            await started;
+            const error = next<string>(a, 'joinError');
+            a.emit('requestPieces', { from: 1000000 });
+            a.emit('joinRoom', { room: 'r', player: 'alice' });
+            await error;
+            expect(server.rooms.get('r')?.piece.types.length).toBe(7);
+        });
+        it('ignores piece requests from a player who is out', async () => {
+            const a = await client();
+            const b = await client();
+            const c = await client();
+            await join(a, 'r', 'alice');
+            await join(b, 'r', 'bob');
+            await join(c, 'r', 'sara');
+            const started = next(c, 'gameStarted');
+            a.emit('startGame');
+            await started;
+            const error = next<string>(c, 'joinError');
+            c.emit('lost');
+            c.emit('requestPieces', { from: 7 });
+            c.emit('joinRoom', { room: 'r', player: 'sara' });
+            await error;
+            expect(server.rooms.get('r')?.started).toBe(true);
+            expect(server.rooms.get('r')?.piece.types.length).toBe(7);
+        });
+    });
+    describe('boardChanged', () => {
+        const heights = [0, 2, 5, 5, 3, 0, 0, 1, 4, 20];
+    
+        it('sends a spectrum to the other players', async () => {
+            const a = await client();
+            const b = await client();
+            await join(a, 'r', 'alice');
+            await join(b, 'r', 'bob');
+            const started = next(b, 'gameStarted');
+            a.emit('startGame');
+            await started;
+            const seen = next<{ name: string; spectrum: number[] }>(a, 'spectrum');
+            b.emit('boardChanged', { spectrum: heights });
+            expect(await seen).toEqual({ name: 'bob', spectrum: heights });
+        });
+        it.each([
+            ['too few columns', [0, 2, 5]],
+            ['a column above the board', [0, 2, 5, 5, 3, 0, 0, 1, 4, 21]],
+            ['a negative height', [0, 2, 5, 5, 3, 0, 0, 1, 4, -1]],
+            ['a fraction', [0, 2.5, 5, 5, 3, 0, 0, 1, 4, 2]],
+            ['not an array', 'hello'],
+        ])('ignores a spectrum with %s', async (_, bad) => {
+            const a = await client();
+            const b = await client();
+            await join(a, 'r', 'alice');
+            await join(b, 'r', 'bob');
+            const started = next(b, 'gameStarted');
+            a.emit('startGame');
+            await started;
+            const seen = next<{ name: string; spectrum: number[] }>(a, 'spectrum');
+            b.emit('boardChanged', { spectrum: bad });
+            b.emit('boardChanged', { spectrum: heights });
+            expect(await seen).toEqual({ name: 'bob', spectrum: heights });
+        });
+    });
+    describe('linesCleared', () => {
+        type Penalty = { lines: number; from: string };
+    
+        const startRound = async (names: string[]) => {
+            const sockets = [];
+            for (const name of names) {
+                const socket = await client();
+                await join(socket, 'r', name);
+                sockets.push(socket);
+            }
+            const started = next(sockets[0], 'gameStarted');
+            sockets[0].emit('startGame');
+            await started;
+            return sockets;
+        };
+    
+        it('sends count - 1 red lines to each opponent', async () => {
+            const [a, b, c] = await startRound(['alice', 'bob', 'sara']);
+            const toAlice = next<Penalty>(a, 'penalty');
+            const toSara = next<Penalty>(c, 'penalty');
+            b.emit('linesCleared', { count: 3 });
+            expect(await toAlice).toEqual({ lines: 2, from: 'bob' });
+            expect(await toSara).toEqual({ lines: 2, from: 'bob' });
+        });
+        it('sends nothing for a single line', async () => {
+            const [a, b] = await startRound(['alice', 'bob']);
+            const first = next<Penalty>(a, 'penalty');
+            b.emit('linesCleared', { count: 1 });
+            b.emit('linesCleared', { count: 2 });
+            expect(await first).toEqual({ lines: 1, from: 'bob' });
+        });
+        it.each([0, 5, 2.5, 'x'])('ignores a count of %s', async (bad) => {
+            const [a, b] = await startRound(['alice', 'bob']);
+            const first = next<Penalty>(a, 'penalty');
+            b.emit('linesCleared', { count: bad });
+            b.emit('linesCleared', { count: 2 });
+            expect(await first).toEqual({ lines: 1, from: 'bob' });
+        });
     });
 });
