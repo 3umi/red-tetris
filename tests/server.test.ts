@@ -212,6 +212,24 @@ describe('disconnect', () => {
             await error;
             expect(server.rooms.get('r')?.piece.types.length).toBe(7);
         });
+        it('ignores piece requests from a player who is out', async () => {
+            const a = await client();
+            const b = await client();
+            const c = await client();
+            await join(a, 'r', 'alice');
+            await join(b, 'r', 'bob');
+            await join(c, 'r', 'sara');
+            const started = next(c, 'gameStarted');
+            a.emit('startGame');
+            await started;
+            const error = next<string>(c, 'joinError');
+            c.emit('lost');
+            c.emit('requestPieces', { from: 7 });
+            c.emit('joinRoom', { room: 'r', player: 'sara' });
+            await error;
+            expect(server.rooms.get('r')?.started).toBe(true);
+            expect(server.rooms.get('r')?.piece.types.length).toBe(7);
+        });
     });
     describe('boardChanged', () => {
         const heights = [0, 2, 5, 5, 3, 0, 0, 1, 4, 20];

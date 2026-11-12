@@ -132,6 +132,10 @@ export const createApp = () => {
       if (!game || !game.started) {
         return;
       }
+      const sender = game.players.find((player) => player.id === socket.id);
+      if (!sender || !sender.alive) {
+        return;
+      }
       const { from } = (data ?? {}) as { from?: unknown };
       if (typeof from !== 'number' || !Number.isInteger(from) || from < 0 || from > game.piece.types.length) {
         return;
