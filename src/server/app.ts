@@ -2,16 +2,30 @@ import express from 'express';
 import { createServer } from 'node:http';
 import { join } from 'node:path';
 import { Server } from 'socket.io';
-
-type Room = {
-  host: string;
-  players: string[];
-};
+import { Game } from './Game';
+import type { PieceType } from '../shared/pieces';
+import { BOARD_WIDTH, BOARD_HEIGHT } from '../shared/board';
 
 const MAX_NAME_LENGTH = 32;
 
 const isValidName = (value: unknown): value is string =>
   typeof value === 'string' && value.trim().length > 0 && value.length <= MAX_NAME_LENGTH;
+
+const toRoomUpdate = (game: Game) => ({
+  host: game.players.find((player) => player.id === game.host)?.name,
+  players: game.players.map((player) => player.name),
+});
+
+const piecesFrom = (game: Game, from: number): PieceType[] => {
+  const pieces: PieceType[] = [];
+  for (let i = from; i < from + 7; i++) {
+    pieces.push(game.piece.get(i));
+  }
+  return pieces;
+};
+
+const isSpectrum = (value: unknown): value is number[] =>
+  Array.isArray(value) && value.length === BOARD_WIDTH && value.every((height) => Number.isInteger(height) && height >= 0 && height <= BOARD_HEIGHT);
 
 const DEFAULT_CLIENT_DIR = join(import.meta.dirname, '../../dist');
 
@@ -19,8 +33,7 @@ export const createApp = ({ clientDir = DEFAULT_CLIENT_DIR }: { clientDir?: stri
   const app = express();
   const httpServer = createServer(app);
   const io = new Server(httpServer);
-  // A Map, not a plain object, so room names like "toString" or "__proto__" are just names.
-  const rooms = new Map<string, Room>();
+  const rooms = new Map<string, Game>();
 
   // The built client (see vite.config.ts): index.html, bundle.js and assets.
   app.use(express.static(clientDir, { index: 'index.html' }));
@@ -30,21 +43,26 @@ export const createApp = ({ clientDir = DEFAULT_CLIENT_DIR }: { clientDir?: stri
   });
 
   io.on('connection', (socket) => {
+    const currentGame = (): Game | undefined => {
+      const roomName = socket.data.room;
+      return roomName === undefined ? undefined : rooms.get(roomName);
+    };
+
     socket.on('disconnect', () => {
-      const roomName: string | undefined = socket.data.room;
-      const room = roomName === undefined ? undefined : rooms.get(roomName);
-      if (!roomName || !room) {
+      const game = currentGame();
+      if (!game) {
         return;
       }
-      room.players = room.players.filter((name) => name !== socket.data.player);
-      if (room.players.length === 0) {
-        rooms.delete(roomName);
+      const wasPlaying = game.started;
+      game.removePlayer(socket.id);
+      if (game.isEmpty()) {
+        rooms.delete(game.name);
         return;
       }
-      if (room.host === socket.data.player) {
-        room.host = room.players[0];
+      io.to(game.name).emit('roomUpdate', toRoomUpdate(game));
+      if (wasPlaying && !game.started) {
+        io.to(game.name).emit('gameOver', { winner: game.lastWinner, lost: game.lost });
       }
-      io.to(roomName).emit('roomUpdate', room);
     });
 
     socket.on('joinRoom', (data: unknown) => {
@@ -57,20 +75,103 @@ export const createApp = ({ clientDir = DEFAULT_CLIENT_DIR }: { clientDir?: stri
         socket.emit('joinError', `Error: you are already in ${socket.data.room}`);
         return;
       }
-      const room = rooms.get(roomName);
-      if (room && room.players.includes(player)) {
-        socket.emit('joinError', `Error: ${player} name already exists in ${roomName}`);
+      const game = rooms.get(roomName) ?? new Game(roomName);
+      const error = game.addPlayer(player, socket.id);
+      if (error) {
+        const message = error === 'nameTaken'
+            ? `Error: ${player} name already exists in ${roomName}`
+            : `Error: ${roomName} has already started`;
+        socket.emit('joinError', message);
         return;
       }
+      rooms.set(roomName, game);
       socket.join(roomName);
-      socket.data.player = player;
       socket.data.room = roomName;
-      if (room) {
-        room.players.push(player);
-      } else {
-        rooms.set(roomName, { host: player, players: [player] });
+      io.to(roomName).emit('roomUpdate', toRoomUpdate(game));
+    });
+
+    socket.on('startGame', () => {
+      const game = currentGame();
+      if (!game) {
+        return;
       }
-      io.to(roomName).emit('roomUpdate', rooms.get(roomName));
+      const error = game.start(socket.id);
+      if (error) {
+        return;
+      }
+      io.to(game.name).emit('gameStarted', { pieces: piecesFrom(game, 0) });
+    });
+
+    socket.on('lost', () => {
+      const game = currentGame();
+      if (!game) {
+        return;
+      }
+      const counted = game.playerLost(socket.id);
+      if (!counted) {
+        return;
+      }
+      const name = game.lost[game.lost.length - 1];
+      io.to(game.name).emit('playerOut', { name });
+      if (!game.started) {
+        io.to(game.name).emit('gameOver', { winner: game.lastWinner, lost: game.lost });
+      }
+    });
+
+    socket.on('requestPieces', (data: unknown) => {
+      const game = currentGame();
+      if (!game || !game.started) {
+        return;
+      }
+      const sender = game.players.find((player) => player.id === socket.id);
+      if (!sender || !sender.alive) {
+        return;
+      }
+      const { from } = (data ?? {}) as { from?: unknown };
+      if (typeof from !== 'number' || !Number.isInteger(from) || from < 0 || from > game.piece.types.length) {
+        return;
+      }
+      socket.emit('pieces', { pieces: piecesFrom(game, from) });
+    });
+
+    socket.on('boardChanged', (data: unknown) => {
+      const game = currentGame();
+      if (!game || !game.started) {
+        return;
+      }
+      const sender = game.players.find((player) => player.id === socket.id);
+      if (!sender || !sender.alive) {
+        return;
+      }
+      const { spectrum } = (data ?? {}) as { spectrum?: unknown };
+      if (!isSpectrum(spectrum)) {
+        return;
+      }
+      socket.to(game.name).emit('spectrum', { name: sender.name, spectrum });
+    });
+
+    socket.on('linesCleared', (data: unknown) => {
+      const game = currentGame();
+      if (!game || !game.started) {
+        return;
+      }
+      const sender = game.players.find((player) => player.id === socket.id);
+      if (!sender || !sender.alive) {
+        return;
+      }
+      const { count } = (data ?? {}) as { count?: unknown };
+      if (typeof count !== 'number' || !Number.isInteger(count) || count < 1 || count > 4) {
+        return;
+      }
+      const lines = count - 1;
+      if (!lines) {
+        return;
+      }
+      game.players.forEach((player) => {
+        if (player.alive && player.id !== socket.id) {
+          io.to(player.id).emit('penalty', { lines, from: sender.name });
+        }
+      });
     });
   });
 
