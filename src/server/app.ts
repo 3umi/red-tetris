@@ -2,7 +2,7 @@ import express from 'express';
 import { createServer } from 'node:http';
 import { Server } from 'socket.io';
 import { Game } from './Game';
-import { Player } from './Player';
+import type { PieceType } from '../shared/pieces';
 
 const MAX_NAME_LENGTH = 32;
 
@@ -13,6 +13,14 @@ const toRoomUpdate = (game: Game) => ({
   host: game.players.find((player) => player.id === game.host)?.name,
   players: game.players.map((player) => player.name),
 });
+
+const piecesFrom = (game: Game, from: number): PieceType[] => {
+  const pieces: PieceType[] = [];
+  for (let i = from; i < from + 7; i++) {
+    pieces.push(game.piece.get(i));
+  }
+  return pieces;
+};
 
 export const createApp = () => {
   const app = express();
@@ -68,8 +76,8 @@ export const createApp = () => {
       const error = game.addPlayer(player, socket.id);
       if (error) {
         const message = error === 'nameTaken'
-              ? `Error: ${player} name already exists in ${roomName}`
-              : `Error: ${roomName} has already started`;
+            ? `Error: ${player} name already exists in ${roomName}`
+            : `Error: ${roomName} has already started`;
         socket.emit('joinError', message);
         return;
       }
@@ -77,6 +85,19 @@ export const createApp = () => {
       socket.join(roomName);
       socket.data.room = roomName;
       io.to(roomName).emit('roomUpdate', toRoomUpdate(game));
+    });
+
+    socket.on('startGame', () => {
+      const roomName: string | undefined = socket.data.room;
+      const game = roomName === undefined ? undefined : rooms.get(roomName);
+      if (!roomName || !game) {
+        return;
+      }
+      const error = game.start(socket.id);
+      if (error) {
+        return;
+      }
+      io.to(roomName).emit('gameStarted', { pieces: piecesFrom(game, 0) });
     });
   });
 

@@ -135,4 +135,27 @@ describe('disconnect', () => {
         a.disconnect();
         expect(await join(await client(), 'r', 'alice')).toEqual({ host: 'alice', players: ['alice'] });
     });
+    describe('startGame', () => {
+        it('starts the round for everyone when the host starts', async () => {
+            const a = await client();
+            const b = await client();
+            await join(a, 'r', 'alice');
+            await join(b, 'r', 'bob');
+            const started = next<{ pieces: string[] }>(b, 'gameStarted');
+            a.emit('startGame');
+            const { pieces } = await started;
+            expect([...pieces].sort()).toEqual(['I', 'J', 'L', 'O', 'S', 'T', 'Z']);
+        });
+        it('ignores startGame from a player who is not the host', async () => {
+            const a = await client();
+            const b = await client();
+            await join(a, 'r', 'alice');
+            await join(b, 'r', 'bob');
+            const error = next<string>(b, 'joinError');
+            b.emit('startGame');
+            b.emit('joinRoom', { room: 'r', player: 'bob' });
+            await error;
+            expect(server.rooms.get('r')?.started).toBe(false);
+        });
+    });
 });
