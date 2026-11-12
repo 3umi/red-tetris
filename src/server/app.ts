@@ -1,5 +1,6 @@
 import express from 'express';
 import { createServer } from 'node:http';
+import { join } from 'node:path';
 import { Server } from 'socket.io';
 
 type Room = {
@@ -12,31 +13,21 @@ const MAX_NAME_LENGTH = 32;
 const isValidName = (value: unknown): value is string =>
   typeof value === 'string' && value.trim().length > 0 && value.length <= MAX_NAME_LENGTH;
 
-export const createApp = () => {
+const DEFAULT_CLIENT_DIR = join(import.meta.dirname, '../../dist');
+
+export const createApp = ({ clientDir = DEFAULT_CLIENT_DIR }: { clientDir?: string } = {}) => {
   const app = express();
   const httpServer = createServer(app);
   const io = new Server(httpServer);
   // A Map, not a plain object, so room names like "toString" or "__proto__" are just names.
   const rooms = new Map<string, Room>();
 
-  app.get('/', (req, res) => {
-    res.send('<h1> Red Tetris </h1>');
+  // The built client (see vite.config.ts): index.html, bundle.js and assets.
+  app.use(express.static(clientDir, { index: 'index.html' }));
+  // Room URLs are routes of the single-page app, so they all get index.html.
+  app.get('/:room/:player', (req, res) => {
+    res.sendFile(join(clientDir, 'index.html'));
   });
-
-  app.get('/:room/:player', (req, res) => res.send(`
-  <script src="/socket.io/socket.io.js"></script>
-  <script>
-    const [, room, player] = location.pathname.split('/').map(decodeURIComponent);
-    const socket = io();
-    socket.emit('joinRoom', { room: room, player: player });
-    socket.on('roomUpdate', (data) => {
-      console.log(data);
-    });
-    socket.on('joinError', (data) => {
-      console.log(data);
-    });
-  </script>
-`));
 
   io.on('connection', (socket) => {
     socket.on('disconnect', () => {
