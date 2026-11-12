@@ -38,7 +38,7 @@ describe('Game', () => {
 
     it('refuses to add players once started', () => {
         const game = gameWith(['Alice', 'Bob']);
-        game.started = true;
+        game.start('Alice')
         const error = game.addPlayer('Sara', 'id3');
         expect(error).toBe('gameStarted');
         expect(game.players.length).toBe(2);
@@ -103,6 +103,7 @@ describe('Game', () => {
 
     it('is not over while several players are alive', () => {
         const game = gameWith(['Alice', 'Bob', 'Sara']);
+        game.start('Alice');
         game.players[0].lose();
         expect(game.isOver()).toBe(false);
         expect(game.winner()).toBe(null);
@@ -110,6 +111,7 @@ describe('Game', () => {
 
     it('is over when one player is left, and that player wins', () => {
         const game = gameWith(['Alice', 'Bob', 'Sara']);
+        game.start('Alice');
         game.players[0].lose();
         game.players[2].lose();
         expect(game.isOver()).toBe(true);
@@ -118,6 +120,7 @@ describe('Game', () => {
 
     it('is over with no winner when the last players lose together', () => {
         const game = gameWith(['Alice', 'Bob']);
+        game.start('Alice');
         game.players[0].lose();
         game.players[1].lose();
         expect(game.isOver()).toBe(true);
@@ -126,15 +129,25 @@ describe('Game', () => {
 
     it('is not over while a solo player is alive', () => {
         const game = gameWith(['Alice']);
+        game.start('Alice');
         expect(game.isOver()).toBe(false);
         expect(game.winner()).toBe(null);
     });
 
     it('is over with no winner when a solo player loses', () => {
         const game = gameWith(['Alice']);
+        game.start('Alice');
         game.players[0].lose();
         expect(game.isOver()).toBe(true);
         expect(game.winner()).toBe(null);
+    });
+
+    it('ends the round and makes the last player win when the opponent leaves', () => {
+        const game = gameWith(['Alice', 'Bob']);
+        game.start('Alice');
+        game.removePlayer('id2');
+        expect(game.isOver()).toBe(true);
+        expect(game.winner()).toBe('Alice');
     });
 
     it('refuses to restart when the player is not the host', () => {
@@ -167,5 +180,4 @@ describe('Game', () => {
         expect(game.players[1].alive).toBe(true);
         expect(game.piece).not.toBe(oldPiece);
     });
-
 });

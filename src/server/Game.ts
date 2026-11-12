@@ -10,6 +10,7 @@ export class Game {
     players: Player[];
     host: string | null;
     started: boolean;
+    multiplayer: boolean;
     piece: Piece;
 
     constructor(name: string) {
@@ -17,6 +18,7 @@ export class Game {
         this.players = [];
         this.host = null;
         this.started = false;
+        this.multiplayer = false;
         this.piece = new Piece();
     }
 
@@ -56,13 +58,14 @@ export class Game {
         if (this.started) {
             return 'alreadyStarted';
         }
+        this.multiplayer = this.players.length > 1;
         this.started = true;
         return null;
     }
 
     isOver(): boolean {
         const alive = this.players.filter((player) => player.alive).length;
-        if (this.players.length > 1 && alive === 1) {
+        if (this.multiplayer && alive === 1) {
             return true;
         }
         return alive === 0;
@@ -70,7 +73,7 @@ export class Game {
 
     winner(): string | null {
         const alive = this.players.filter((player) => player.alive);
-        if (this.players.length > 1 && alive.length === 1) {
+        if (this.multiplayer && alive.length === 1) {
             return alive[0].name;
         }
         return null;
