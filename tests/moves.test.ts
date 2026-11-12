@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { move, rotatePiece, createPiece, canSpawn } from '../src/shared/moves';
+import { move, rotatePiece, createPiece, canSpawn, hardDrop } from '../src/shared/moves';
 import { createBoard } from '../src/shared/board';
 import { T, I, rotate, type Piece, SHAPES } from '../src/shared/pieces';
 
@@ -79,5 +79,22 @@ describe('canSpawn', () => {
         const board = createBoard();
         board[0][3] = 1;
         expect(canSpawn(board, createPiece('T'))).toBe(true);
+    });
+});
+
+describe('hardDrop', () => {
+    it('drops to the floor of an empty board', () => {
+        const piece = hardDrop(createBoard(), createPiece('T'));
+        expect(piece.y).toBe(18);
+    });
+    it('stops on top of the pile', () => {
+        const board = createBoard();
+        board[19][4] = 1;
+        const piece = hardDrop(board, createPiece('T'));
+        expect(piece.y).toBe(17);
+    });
+    it('returns the same piece when it is already resting', () => {
+        const piece: Piece = {type: 'T', shape: T, x: 3, y: 18};
+        expect(hardDrop(createBoard(), piece)).toBe(piece);
     });
 });

@@ -1,0 +1,559 @@
+@import '@fontsource-variable/archivo/wdth.css';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+@import '@fontsource/ibm-plex-mono/600.css';
+
+/* Colours sampled from Design.pdf. */
+:root {
+    --paper: #efe6d5;
+    --paper-light: #f6efe2;
+    --ink: #16130e;
+    --muted: #5d574c;
+    --rule: #b8ae9c;
+    --red: #c4230d;
+    --red-deep: #b51f0e;
+    --red-stripe: #8e1a09;
+    --cream: #f4eddd;
+    --out: #8e897e;
+    --panel: #16130e;
+    --cell-empty: #211e19;
+    --panel-text: #e7decf;
+
+    --piece-1: #2a99a0; /* I */
+    --piece-2: #e3a72f; /* O */
+    --piece-3: #4b6fd0; /* T */
+    --piece-4: #7fa34b; /* S */
+    --piece-5: #d98aa9; /* Z */
+    --piece-6: #f4eddd; /* J */
+    --piece-7: #e8782e; /* L */
+
+    --display: 'Archivo Variable', 'Arial Narrow', sans-serif;
+    --mono: 'IBM Plex Mono', ui-monospace, monospace;
+    --cell: 35px;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html, body, #root {
+    margin: 0;
+    min-height: 100%;
+}
+
+body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--mono);
+    font-size: 15px;
+    -webkit-font-smoothing: antialiased;
+}
+
+button, input {
+    font: inherit;
+    color: inherit;
+}
+
+.display {
+    font-family: var(--display);
+    font-stretch: 62%;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    line-height: 0.9;
+    margin: 0;
+}
+
+/* ---------- Pixel art ---------- */
+
+.pixel-art {
+    display: grid;
+    width: max-content;
+}
+
+.pixel-art span {
+    display: block;
+}
+
+/* ---------- Home ---------- */
+
+.home {
+    position: relative;
+    min-height: 100vh;
+    overflow: hidden;
+    padding: 40px 64px 0;
+}
+
+.home-title {
+    font-size: 200px;
+    line-height: 0.76;
+}
+
+.home-title .red {
+    color: var(--red);
+    display: block;
+}
+
+.home-tagline {
+    max-width: 460px;
+    margin: 30px 0 22px;
+    font-size: 16px;
+    line-height: 1.6;
+}
+
+.home-form {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 13px;
+}
+
+.field input {
+    width: 168px;
+    height: 44px;
+    padding: 0 12px;
+    border: 2px solid var(--ink);
+    background: var(--paper-light);
+    font-weight: 600;
+    font-size: 15px;
+}
+
+.field input:focus {
+    outline: 2px solid var(--red);
+    outline-offset: 1px;
+}
+
+.button {
+    height: 44px;
+    padding: 0 24px;
+    border: 0;
+    background: var(--ink);
+    color: var(--cream);
+    font-weight: 500;
+    font-size: 15px;
+    cursor: pointer;
+}
+
+.button:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.button-wide {
+    width: 100%;
+    height: 54px;
+}
+
+.home-error {
+    margin-top: 12px;
+    color: var(--red);
+    font-size: 13px;
+}
+
+.home-pelican {
+    position: absolute;
+    top: 48px;
+    right: 67px;
+}
+
+@media (max-width: 1180px) {
+    .home-pelican {
+        position: static;
+        margin-top: 32px;
+        transform-origin: left top;
+        transform: scale(0.5);
+        height: 160px;
+    }
+}
+
+.home-forest {
+    position: absolute;
+    left: -2px;
+    bottom: 0;
+}
+
+/* ---------- Room layout: three columns ---------- */
+
+.room {
+    display: grid;
+    grid-template-columns: minmax(0, 506fr) 430px minmax(0, 504fr);
+    min-height: 100vh;
+}
+
+.side {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    padding: 40px 48px 40px 64px;
+    overflow: hidden;
+}
+
+.side-right {
+    padding: 92px 63px 40px 48px;
+}
+
+.centre {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: var(--panel);
+    color: var(--panel-text);
+    padding: 44px 36px 0;
+    z-index: 1;
+}
+
+.centre-status {
+    align-self: flex-start;
+    min-height: 18px;
+    margin-bottom: 30px;
+    font-size: 14px;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--display);
+    font-stretch: 62%;
+    font-weight: 700;
+    font-size: 27px;
+    line-height: 1;
+}
+
+.logo::before {
+    content: '';
+    width: 13px;
+    height: 13px;
+    background: var(--red);
+}
+
+.room-name {
+    margin-top: 34px;
+    font-size: 132px;
+    overflow-wrap: anywhere;
+}
+
+.room-url {
+    margin-top: 4px;
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.muted {
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.spacer {
+    flex: 1;
+}
+
+/* ---------- Lobby ---------- */
+
+.players {
+    list-style: none;
+    margin: 36px 0 0;
+    padding: 0;
+    border-top: 2px solid var(--ink);
+}
+
+.players li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 50px;
+    border-bottom: 1px solid var(--rule);
+    font-weight: 600;
+    font-size: 15px;
+}
+
+.players .tag {
+    font-weight: 400;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.start-note {
+    margin-top: 12px;
+}
+
+.controls-title {
+    font-size: 38px;
+    margin-bottom: 14px;
+}
+
+.controls {
+    display: grid;
+    grid-template-columns: 117px 1fr;
+    row-gap: 12px;
+    align-items: center;
+    margin: 0;
+}
+
+.controls dt {
+    display: flex;
+    gap: 6px;
+}
+
+.controls dd {
+    margin: 0;
+    font-size: 14px;
+}
+
+.key {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    height: 34px;
+    padding: 0 10px;
+    border: 2px solid var(--ink);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.red-lines-title {
+    color: var(--red);
+    font-size: 38px;
+    margin-bottom: 14px;
+}
+
+.red-lines-text {
+    margin: 0 0 12px;
+    font-size: 14px;
+    line-height: 1.55;
+}
+
+.red-lines {
+    display: grid;
+    grid-template-columns: 117px 1fr;
+    row-gap: 8px;
+    margin: 0;
+    font-size: 14px;
+}
+
+.red-lines dd {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin: 0;
+}
+
+.stripe {
+    width: 46px;
+    height: 14px;
+}
+
+/* ---------- Board ---------- */
+
+.board {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(10, var(--cell));
+    grid-template-rows: repeat(20, var(--cell));
+    gap: 1px;
+    width: calc(var(--cell) * 10 + 9px);
+    background: var(--panel);
+}
+
+.cell {
+    background: var(--cell-empty);
+}
+
+.cell-1, .cell-2, .cell-3, .cell-4, .cell-5, .cell-6, .cell-7 {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), inset 0 -3px 0 rgba(0, 0, 0, 0.22);
+}
+
+.cell-1 { background: var(--piece-1); }
+.cell-2 { background: var(--piece-2); }
+.cell-3 { background: var(--piece-3); }
+.cell-4 { background: var(--piece-4); }
+.cell-5 { background: var(--piece-5); }
+.cell-6 { background: var(--piece-6); }
+.cell-7 { background: var(--piece-7); }
+
+.cell-8, .stripe {
+    background: repeating-linear-gradient(135deg, var(--red) 0 5px, var(--red-stripe) 5px 9px);
+}
+
+.board-art {
+    position: absolute;
+    top: 140px;
+    left: 18px;
+    pointer-events: none;
+}
+
+/* ---------- Game ---------- */
+
+.room-name-small {
+    margin-top: 44px;
+    font-size: 62px;
+}
+
+.penalty-count {
+    margin-top: 28px;
+    color: var(--red);
+    font-size: 300px;
+    line-height: 0.78;
+}
+
+.penalty-label {
+    margin-top: 12px;
+    font-weight: 600;
+    font-size: 15px;
+}
+
+.leave {
+    align-self: flex-start;
+    padding: 0;
+    border: 0;
+    background: none;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.opponents {
+    display: flex;
+    flex-direction: column;
+    gap: 34px;
+}
+
+.opponent-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding-bottom: 6px;
+    border-bottom: 1px dotted currentColor;
+}
+
+.opponent-name {
+    font-size: 36px;
+}
+
+.opponent-status {
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.opponent-out {
+    color: var(--out);
+}
+
+.opponent-out .opponent-status {
+    color: var(--out);
+}
+
+.spectrum {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 120px;
+}
+
+.spectrum span {
+    flex: 1;
+    background: currentColor;
+}
+
+/* ---------- Game over ---------- */
+
+.room-over {
+    background: var(--red-deep);
+    color: var(--cream);
+}
+
+.room-over .logo::before {
+    background: var(--cream);
+}
+
+.room-over .muted,
+.room-over .opponent-status,
+.room-over .opponent-out,
+.room-over .opponent-out .opponent-status {
+    color: var(--cream);
+}
+
+.room-over .opponents {
+    gap: 14px;
+}
+
+.room-over .opponent-head {
+    border-bottom: 0;
+}
+
+.room-over .spectrum {
+    height: 100px;
+}
+
+.winner-title {
+    margin-top: 30px;
+    font-size: 170px;
+    line-height: 0.8;
+    overflow-wrap: anywhere;
+}
+
+.finish {
+    margin: 20px 0 30px;
+    font-weight: 600;
+    font-size: 15px;
+}
+
+.room-over .button {
+    background: var(--cream);
+    color: var(--ink);
+    width: 333px;
+    max-width: 100%;
+}
+
+.side-forest {
+    position: absolute;
+    bottom: -12px;
+    pointer-events: none;
+}
+
+.side-forest-left {
+    left: 0;
+}
+
+.side-forest-right {
+    right: 0;
+}
+
+/* ---------- Narrow screens: stack the columns ---------- */
+
+@media (max-width: 1100px) {
+    .room {
+        grid-template-columns: 1fr;
+    }
+    .centre {
+        order: -1;
+        padding: 24px 16px;
+    }
+    .side, .side-right {
+        padding: 32px 16px;
+    }
+    .home {
+        padding: 32px 16px 0;
+    }
+    .home-title {
+        font-size: clamp(96px, 26vw, 216px);
+    }
+    .room-name, .winner-title {
+        font-size: clamp(64px, 20vw, 118px);
+    }
+    .penalty-count {
+        font-size: 160px;
+    }
+    :root {
+        --cell: min(36px, calc((100vw - 41px) / 10));
+    }
+}

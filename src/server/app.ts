@@ -1,5 +1,6 @@
 import express from 'express';
 import { createServer } from 'node:http';
+import { join } from 'node:path';
 import { Server } from 'socket.io';
 import { Game } from './Game';
 import type { PieceType } from '../shared/pieces';
@@ -26,30 +27,20 @@ const piecesFrom = (game: Game, from: number): PieceType[] => {
 const isSpectrum = (value: unknown): value is number[] =>
   Array.isArray(value) && value.length === BOARD_WIDTH && value.every((height) => Number.isInteger(height) && height >= 0 && height <= BOARD_HEIGHT);
 
-export const createApp = () => {
+const DEFAULT_CLIENT_DIR = join(import.meta.dirname, '../../dist');
+
+export const createApp = ({ clientDir = DEFAULT_CLIENT_DIR }: { clientDir?: string } = {}) => {
   const app = express();
   const httpServer = createServer(app);
   const io = new Server(httpServer);
   const rooms = new Map<string, Game>();
 
-  app.get('/', (req, res) => {
-    res.send('<h1> Red Tetris </h1>');
+  // The built client (see vite.config.ts): index.html, bundle.js and assets.
+  app.use(express.static(clientDir, { index: 'index.html' }));
+  // Room URLs are routes of the single-page app, so they all get index.html.
+  app.get('/:room/:player', (req, res) => {
+    res.sendFile(join(clientDir, 'index.html'));
   });
-
-  app.get('/:room/:player', (req, res) => res.send(`
-  <script src="/socket.io/socket.io.js"></script>
-  <script>
-    const [, room, player] = location.pathname.split('/').map(decodeURIComponent);
-    const socket = io();
-    socket.emit('joinRoom', { room: room, player: player });
-    socket.on('roomUpdate', (data) => {
-      console.log(data);
-    });
-    socket.on('joinError', (data) => {
-      console.log(data);
-    });
-  </script>
-`));
 
   io.on('connection', (socket) => {
     const currentGame = (): Game | undefined => {
