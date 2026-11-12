@@ -29,7 +29,9 @@ export const Game = ({ onLeave }: { onLeave: () => void }) => {
     useGravity(playing);
     useControls(playing);
 
-    const stillPlaying = players.length - outOrder.length;
+    // Count from the room's current players: someone who lost and then left is in
+    // outOrder but no longer in players.
+    const stillPlaying = players.filter((name) => !outOrder.includes(name)).length;
 
     return (
         <div className="room">

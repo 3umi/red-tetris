@@ -146,6 +146,16 @@ describe('room', () => {
         expect(screen.getByText('You finished 2nd of 2')).toBeTruthy();
         expect(screen.getByText('Joined')).toBeTruthy();
     });
+    it('keeps the still-playing count right when a player who lost leaves', () => {
+        const app = renderApp('/pelicans/oumaima');
+        const server = app.connections.last();
+        act(() => server.serverSends('roomUpdate', { host: 'oumaima', players: ['oumaima', 'sara', 'adam'] }));
+        act(() => server.serverSends('gameStarted', { pieces: ['T'] }));
+        act(() => server.serverSends('playerOut', { name: 'adam' }));
+        expect(screen.getByText('2 of 3 still playing')).toBeTruthy();
+        act(() => server.serverSends('roomUpdate', { host: 'oumaima', players: ['oumaima', 'sara'] }));
+        expect(screen.getByText('2 of 2 still playing')).toBeTruthy();
+    });
     it('leaves the room and goes home', () => {
         const { server } = joinAsHost();
         act(() => server.serverSends('gameStarted', { pieces: ['T'] }));
