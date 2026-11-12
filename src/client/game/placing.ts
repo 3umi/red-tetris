@@ -1,13 +1,16 @@
-// Finishing places for the game-over screen. Players knocked out first finish last.
+// Finishing places for the game-over screen. Only the round's players count: the
+// winner and everyone in `outOrder`. Someone who joined after the round has no place.
 
-type Round = { players: string[]; outOrder: string[]; winner: string | null };
+type Round = { outOrder: string[]; winner: string | null };
 
-export const placeOf = (name: string, { players, outOrder, winner }: Round): number | null => {
-    if (name === winner) {
+export const roundSize = ({ outOrder, winner }: Round): number => outOrder.length + (winner ? 1 : 0);
+
+export const placeOf = (name: string, round: Round): number | null => {
+    if (name === round.winner) {
         return 1;
     }
-    const index = outOrder.indexOf(name);
-    return index === -1 ? null : players.length - index;
+    const index = round.outOrder.indexOf(name);
+    return index === -1 ? null : roundSize(round) - index;
 };
 
 export const ordinal = (n: number): string => {

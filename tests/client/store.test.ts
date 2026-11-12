@@ -2,10 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { createStore } from '../../src/client/store';
 import room, {
     initialRoom, joinRequested, joinFailed, roomUpdated, startRequested, roundStarted, spectrumUpdated,
-    playerOut, roundOver, restartRequested, roundReset, left,
+    playerOut, roundOver, left,
 } from '../../src/client/store/roomSlice';
 import { hardDropped, movedLeft, movedRight, rotated, softDropped, ticked, penaltyReceived } from '../../src/client/store/gameSlice';
-import { placeOf, ordinal } from '../../src/client/game/placing';
+import { placeOf, ordinal, roundSize } from '../../src/client/game/placing';
 import { createBoard, fullRow } from '../../src/shared/board';
 import { fakeConnections } from './fakeSocket';
 
@@ -42,26 +42,33 @@ describe('room reducer', () => {
         expect(state.outOrder).toEqual(['adam', 'sara', 'oumaima']);
         expect(state.opponents.adam.status).toBe('out');
     });
-    it('marks the winner when the round is over', () => {
-        const state = room(room(joined, roundStarted()), roundOver({ winner: 'sara' }));
+    it('marks the winner and takes the loss order from the server when the round is over', () => {
+        const state = room(room(joined, roundStarted()), roundOver({ winner: 'sara', lost: ['adam', 'oumaima'] }));
         expect(state.phase).toBe('over');
         expect(state.winner).toBe('sara');
+        expect(state.outOrder).toEqual(['adam', 'oumaima']);
         expect(state.opponents.sara.status).toBe('winner');
     });
     it('handles a round over with no winner, or with me as the winner', () => {
-        expect(room(joined, roundOver({ winner: null })).winner).toBe(null);
-        expect(room(joined, roundOver({ winner: 'oumaima' })).opponents).toEqual(joined.opponents);
+        expect(room(joined, roundOver({ winner: null, lost: ['oumaima'] })).winner).toBe(null);
+        expect(room(joined, roundOver({ winner: 'oumaima', lost: ['sara', 'adam'] })).opponents).toEqual(joined.opponents);
     });
-    it('goes back to the lobby with fresh opponents on reset', () => {
-        const over = [roundStarted(), playerOut('adam'), roundOver({ winner: 'sara' }), roundReset()].reduce(room, joined);
-        expect(over.phase).toBe('lobby');
-        expect(over.outOrder).toEqual([]);
-        expect(over.winner).toBe(null);
-        expect(over.opponents.adam.status).toBe('playing');
+    it('starts the next round from the game-over screen with fresh opponents', () => {
+        const next = [roundStarted(), playerOut('adam'), roundOver({ winner: 'sara', lost: ['adam', 'oumaima'] }), roundStarted()]
+            .reduce(room, joined);
+        expect(next.phase).toBe('playing');
+        expect(next.outOrder).toEqual([]);
+        expect(next.winner).toBe(null);
+        expect(next.opponents.adam.status).toBe('playing');
+    });
+    it('adds a player who joins after the round is over', () => {
+        const over = room(room(joined, roundStarted()), roundOver({ winner: 'sara', lost: ['adam', 'oumaima'] }));
+        const state = room(over, roomUpdated({ host: 'oumaima', players: ['oumaima', 'sara', 'adam', 'yasmine'] }));
+        expect(state.phase).toBe('over');
+        expect(state.opponents.yasmine.status).toBe('playing');
     });
     it('leaves no change for requests handled by middleware', () => {
         expect(room(joined, startRequested())).toBe(joined);
-        expect(room(joined, restartRequested())).toBe(joined);
     });
     it('forgets everything when leaving', () => {
         expect(room(joined, left())).toEqual(initialRoom);
@@ -69,14 +76,18 @@ describe('room reducer', () => {
 });
 
 describe('placing', () => {
-    const round = { players: ['a', 'b', 'c', 'd'], outOrder: ['d', 'c', 'b'], winner: 'a' };
+    const round = { outOrder: ['d', 'c', 'b'], winner: 'a' };
+    it('counts only the players of the round', () => {
+        expect(roundSize(round)).toBe(4);
+        expect(roundSize({ outOrder: ['me'], winner: null })).toBe(1);
+    });
     it('gives the winner first place and the first out last place', () => {
         expect(placeOf('a', round)).toBe(1);
         expect(placeOf('b', round)).toBe(2);
         expect(placeOf('d', round)).toBe(4);
     });
-    it('has no place for someone still playing', () => {
-        expect(placeOf('a', { ...round, winner: null })).toBe(null);
+    it('has no place for someone who was not in the round', () => {
+        expect(placeOf('e', round)).toBe(null);
     });
     it('writes ordinals', () => {
         expect([1, 2, 3, 4, 11, 12, 13, 21, 22, 23, 101].map(ordinal))
@@ -87,7 +98,7 @@ describe('placing', () => {
 describe('socket middleware', () => {
     const setup = () => {
         const connections = fakeConnections();
-        const store = createStore({ connect: connections.connect, dealLocally: false });
+        const store = createStore({ connect: connections.connect });
         store.dispatch(joinRequested({ room: 'pelicans', player: 'oumaima' }));
         return { store, connections, server: connections.last() };
     };
@@ -109,23 +120,22 @@ describe('socket middleware', () => {
         expect(store.getState().game.queue).toEqual(['O', 'I']);
         expect(store.getState().game.lastPenaltyFrom).toBe('sara');
         server.serverSends('playerOut', { name: 'sara' });
-        server.serverSends('gameOver', { winner: 'oumaima' });
+        server.serverSends('gameOver', { winner: 'oumaima', lost: ['sara'] });
         expect(store.getState().room).toMatchObject({ phase: 'over', winner: 'oumaima', outOrder: ['sara'] });
-        server.serverSends('roundReset');
-        expect(store.getState().room.phase).toBe('lobby');
-        expect(store.getState().game.status).toBe('idle');
+        server.serverSends('gameStarted', { pieces: ['Z'] });
+        expect(store.getState().room).toMatchObject({ phase: 'playing', winner: null, outOrder: [] });
+        expect(store.getState().game).toMatchObject({ status: 'playing', locks: 0, penalty: 0, queue: [] });
+        expect(store.getState().game.piece?.type).toBe('Z');
     });
     it('shows join errors', () => {
         const { store, server } = setup();
         server.serverSends('joinError', 'Error: oumaima name already exists in pelicans');
         expect(store.getState().room.error).toContain('already exists');
     });
-    it('asks the server to start and restart', () => {
+    it('asks the server to start a round', () => {
         const { store, server } = setup();
         store.dispatch(startRequested());
-        store.dispatch(restartRequested());
         expect(server.sent('startGame')).toHaveLength(1);
-        expect(server.sent('restartGame')).toHaveLength(1);
     });
     it('reports the spectrum when a piece locks, without cleared lines for a plain drop', () => {
         const { store, server } = setup();
@@ -141,7 +151,6 @@ describe('socket middleware', () => {
         board[19] = [...fullRow().slice(0, 9), 0];
         const store = createStore({
             connect: connections.connect,
-            dealLocally: false,
             preloadedState: {
                 game: {
                     status: 'playing', board, queue: ['T', 'O', 'I', 'S', 'Z', 'J', 'L', 'T'], locks: 0, cleared: 0, penalty: 0, lastPenaltyFrom: null,
@@ -175,6 +184,13 @@ describe('socket middleware', () => {
         store.dispatch(hardDropped());
         expect(server.sent('requestPieces')).toEqual([{ from: 3 }, { from: 5 }]);
     });
+    it('asks for pieces from the start again in the next round', () => {
+        const { server } = setup();
+        server.serverSends('gameStarted', { pieces: ['I', 'O', 'T'] });
+        server.serverSends('gameOver', { winner: null, lost: ['oumaima'] });
+        server.serverSends('gameStarted', { pieces: ['S', 'Z', 'L'] });
+        expect(server.sent('requestPieces')).toEqual([{ from: 3 }, { from: 3 }]);
+    });
     it('closes the old connection when joining again or leaving', () => {
         const { store, connections } = setup();
         store.dispatch(joinRequested({ room: 'other', player: 'oumaima' }));
@@ -182,41 +198,5 @@ describe('socket middleware', () => {
         store.dispatch(left());
         expect(connections.sockets[1].state.connected).toBe(false);
         expect(store.getState().room).toEqual(initialRoom);
-    });
-});
-
-describe('local dealer', () => {
-    const setup = () => {
-        const connections = fakeConnections();
-        const store = createStore({ connect: connections.connect });
-        store.dispatch(joinRequested({ room: 'solo', player: 'me' }));
-        connections.last().serverSends('roomUpdate', { host: 'me', players: ['me'] });
-        return { store };
-    };
-
-    it('starts a round with pieces dealt in the browser', () => {
-        const { store } = setup();
-        store.dispatch(startRequested());
-        expect(store.getState().room.phase).toBe('playing');
-        expect(store.getState().game.piece).not.toBe(null);
-        expect(store.getState().game.queue.length).toBeGreaterThanOrEqual(7);
-    });
-    it('keeps the queue topped up', () => {
-        const { store } = setup();
-        store.dispatch(startRequested());
-        Array.from({ length: 10 }).forEach(() => store.dispatch(movedLeft()));
-        store.dispatch(hardDropped());
-        store.dispatch(hardDropped());
-        store.dispatch(hardDropped());
-        expect(store.getState().game.queue.length).toBeGreaterThanOrEqual(7);
-    });
-    it('ends the round when the player loses, and goes back to the lobby on restart', () => {
-        const { store } = setup();
-        store.dispatch(startRequested());
-        store.dispatch(penaltyReceived({ lines: 20, from: 'nobody' }));
-        expect(store.getState().room.phase).toBe('over');
-        store.dispatch(restartRequested());
-        expect(store.getState().room.phase).toBe('lobby');
-        expect(store.getState().game.status).toBe('idle');
     });
 });

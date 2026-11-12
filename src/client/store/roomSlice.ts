@@ -79,31 +79,24 @@ const roomSlice = createSlice({
                 opponents: opponent ? { ...state.opponents, [opponent.name]: { ...opponent, status: 'out' } } : state.opponents,
             };
         },
-        roundOver: (state, action: PayloadAction<{ winner: string | null }>) => {
-            const winner = action.payload.winner;
+        roundOver: (state, action: PayloadAction<{ winner: string | null; lost: string[] }>) => {
+            const { winner, lost } = action.payload;
             const opponent = winner ? state.opponents[winner] : undefined;
             return {
                 ...state,
                 phase: 'over',
                 winner,
+                // The server's list is complete, even for a client that missed a playerOut.
+                outOrder: lost,
                 opponents: opponent ? { ...state.opponents, [opponent.name]: { ...opponent, status: 'winner' } } : state.opponents,
             };
         },
-        restartRequested: (state) => state,
-        roundReset: (state) => ({
-            ...state,
-            phase: 'lobby',
-            outOrder: [],
-            winner: null,
-            opponents: Object.fromEntries(Object.values(state.opponents)
-                .map((opponent) => [opponent.name, { ...opponent, status: 'playing', spectrum: emptySpectrum() }])),
-        }),
         left: () => initialRoom,
     },
 });
 
 export const {
     joinRequested, joinFailed, roomUpdated, startRequested, roundStarted, spectrumUpdated,
-    playerOut, roundOver, restartRequested, roundReset, left,
+    playerOut, roundOver, left,
 } = roomSlice.actions;
 export default roomSlice.reducer;

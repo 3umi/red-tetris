@@ -78,7 +78,7 @@ const SCREENS = { lobby: Lobby, game: () => <Game onLeave={() => undefined} />, 
 
 export const Preview = ({ screen }: { screen: string }) => {
     const Screen = SCREENS[screen as keyof typeof SCREENS] ?? Lobby;
-    const store = createStore({ dealLocally: false, preloadedState: states[screen] ?? states.lobby });
+    const store = createStore({ preloadedState: states[screen] ?? states.lobby });
     return (
         <Provider store={store}>
             <MemoryRouter>

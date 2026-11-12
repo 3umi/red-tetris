@@ -22,7 +22,7 @@ afterEach(() => {
 
 const Location = () => <div data-testid="location">{useLocation().pathname}</div>;
 
-const renderApp = (path: string, options: { dealLocally?: boolean; preloadedState?: Partial<RootState> } = {}) => {
+const renderApp = (path: string, options: { preloadedState?: Partial<RootState> } = {}) => {
     const connections = fakeConnections();
     const store = createStore({ connect: connections.connect, ...options });
     render(
@@ -92,7 +92,7 @@ describe('room', () => {
     });
     it('plays a round: start, move with the keyboard, fall, and see opponents', () => {
         vi.useFakeTimers();
-        const { store, server } = joinAsHost({ dealLocally: false });
+        const { store, server } = joinAsHost();
         fireEvent.click(screen.getByRole('button', { name: 'Start game' }));
         expect(server.sent('startGame')).toHaveLength(1);
 
@@ -125,41 +125,51 @@ describe('room', () => {
         act(() => server.serverSends('spectrum', { name: 'sara', spectrum: [20, 0, 0, 0, 0, 0, 0, 0, 0, 0] }));
         expect(screen.getByLabelText('Column heights 20 0 0 0 0 0 0 0 0 0')).toBeTruthy();
     });
-    it('shows "You win" to the winner and lets the host restart', () => {
-        const { server } = joinAsHost({ dealLocally: false });
+    it('shows "You win" to the winner, and the host restarts with startGame', () => {
+        const { server } = joinAsHost();
         act(() => server.serverSends('gameStarted', { pieces: ['T'] }));
         act(() => server.serverSends('playerOut', { name: 'sara' }));
-        act(() => server.serverSends('gameOver', { winner: 'oumaima' }));
+        act(() => server.serverSends('gameOver', { winner: 'oumaima', lost: ['sara'] }));
         expect(screen.getByRole('heading', { name: 'You win' })).toBeTruthy();
         expect(screen.getByText('You finished 1st of 2')).toBeTruthy();
         expect(screen.getByText('2nd')).toBeTruthy();
         fireEvent.click(screen.getByRole('button', { name: 'Restart game' }));
-        expect(server.sent('restartGame')).toHaveLength(1);
+        expect(server.sent('startGame')).toHaveLength(1);
+        act(() => server.serverSends('gameStarted', { pieces: ['O'] }));
+        expect(screen.getByText('2 of 2 still playing')).toBeTruthy();
+    });
+    it('keeps places right when someone joins after the round', () => {
+        const { server } = joinAsHost();
+        act(() => server.serverSends('gameStarted', { pieces: ['T'] }));
+        act(() => server.serverSends('gameOver', { winner: 'sara', lost: ['oumaima'] }));
+        act(() => server.serverSends('roomUpdate', { host: 'oumaima', players: ['oumaima', 'sara', 'yasmine'] }));
+        expect(screen.getByText('You finished 2nd of 2')).toBeTruthy();
+        expect(screen.getByText('Joined')).toBeTruthy();
     });
     it('leaves the room and goes home', () => {
-        const { server } = joinAsHost({ dealLocally: false });
+        const { server } = joinAsHost();
         act(() => server.serverSends('gameStarted', { pieces: ['T'] }));
         fireEvent.click(screen.getByRole('button', { name: 'Leave game' }));
         expect(screen.getByTestId('location').textContent).toBe('/');
         expect(server.state.connected).toBe(false);
     });
-    it('plays solo with pieces dealt in the browser', () => {
+    it('plays a solo round to the end', () => {
         const app = renderApp('/solo/me');
-        act(() => app.connections.last().serverSends('roomUpdate', { host: 'me', players: ['me'] }));
+        const server = app.connections.last();
+        act(() => server.serverSends('roomUpdate', { host: 'me', players: ['me'] }));
         fireEvent.click(screen.getByRole('button', { name: 'Start game' }));
+        act(() => server.serverSends('gameStarted', { pieces: ['T', 'O', 'I', 'S', 'Z', 'J', 'L', 'T'] }));
         expect(screen.getByText('1 of 1 still playing')).toBeTruthy();
-        act(() => {
-            app.store.dispatch({ type: 'game/penaltyReceived', payload: { lines: 20, from: 'nobody' } });
-        });
+        key(' ');
+        act(() => server.serverSends('gameOver', { winner: null, lost: ['me'] }));
         expect(screen.getByRole('heading', { name: 'Game over' })).toBeTruthy();
-        expect(screen.getByText(/You placed \d+ pieces/)).toBeTruthy();
+        expect(screen.getByText('You placed 1 piece')).toBeTruthy();
     });
 });
 
 describe('game over', () => {
     const over = (me: string, winner: string | null) => {
         const store = createStore({
-            dealLocally: false,
             preloadedState: {
                 room: {
                     ...initialRoom, room: 'pelicans', me, host: 'oumaima', phase: 'over', winner,

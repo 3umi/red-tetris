@@ -3,8 +3,8 @@ import type { Socket } from 'socket.io-client';
 import { getSpectrum } from '../../shared/board';
 import type { ClientToServer, ServerToClient } from './protocol';
 import {
-    joinRequested, joinFailed, roomUpdated, startRequested, restartRequested, roundStarted,
-    spectrumUpdated, playerOut, roundOver, roundReset, left,
+    joinRequested, joinFailed, roomUpdated, startRequested, roundStarted,
+    spectrumUpdated, playerOut, roundOver, left,
 } from './roomSlice';
 import { started, piecesReceived, penaltyReceived, reset } from './gameSlice';
 import type { GameState } from '../game/engine';
@@ -36,11 +36,7 @@ export const createSocketMiddleware = (connect: () => GameSocket): Middleware<ob
         socket.on('spectrum', (data) => store.dispatch(spectrumUpdated(data)));
         socket.on('penalty', (data) => store.dispatch(penaltyReceived(data)));
         socket.on('playerOut', ({ name }) => store.dispatch(playerOut(name)));
-        socket.on('gameOver', ({ winner }) => store.dispatch(roundOver({ winner })));
-        socket.on('roundReset', () => {
-            store.dispatch(reset());
-            store.dispatch(roundReset());
-        });
+        socket.on('gameOver', (data) => store.dispatch(roundOver(data)));
     };
 
     // Tell the server what changed on our own board after an action.
@@ -70,8 +66,6 @@ export const createSocketMiddleware = (connect: () => GameSocket): Middleware<ob
             socket.emit('joinRoom', action.payload);
         } else if (startRequested.match(action)) {
             current()?.emit('startGame');
-        } else if (restartRequested.match(action)) {
-            current()?.emit('restartGame');
         } else if (left.match(action)) {
             sockets.splice(0).forEach((socket) => socket.disconnect());
             store.dispatch(reset());
