@@ -248,4 +248,43 @@ describe('disconnect', () => {
             expect(await seen).toEqual({ name: 'bob', spectrum: heights });
         });
     });
+    describe('linesCleared', () => {
+        type Penalty = { lines: number; from: string };
+    
+        const startRound = async (names: string[]) => {
+            const sockets = [];
+            for (const name of names) {
+                const socket = await client();
+                await join(socket, 'r', name);
+                sockets.push(socket);
+            }
+            const started = next(sockets[0], 'gameStarted');
+            sockets[0].emit('startGame');
+            await started;
+            return sockets;
+        };
+    
+        it('sends count - 1 red lines to each opponent', async () => {
+            const [a, b, c] = await startRound(['alice', 'bob', 'sara']);
+            const toAlice = next<Penalty>(a, 'penalty');
+            const toSara = next<Penalty>(c, 'penalty');
+            b.emit('linesCleared', { count: 3 });
+            expect(await toAlice).toEqual({ lines: 2, from: 'bob' });
+            expect(await toSara).toEqual({ lines: 2, from: 'bob' });
+        });
+        it('sends nothing for a single line', async () => {
+            const [a, b] = await startRound(['alice', 'bob']);
+            const first = next<Penalty>(a, 'penalty');
+            b.emit('linesCleared', { count: 1 });
+            b.emit('linesCleared', { count: 2 });
+            expect(await first).toEqual({ lines: 1, from: 'bob' });
+        });
+        it.each([0, 5, 2.5, 'x'])('ignores a count of %s', async (bad) => {
+            const [a, b] = await startRound(['alice', 'bob']);
+            const first = next<Penalty>(a, 'penalty');
+            b.emit('linesCleared', { count: bad });
+            b.emit('linesCleared', { count: 2 });
+            expect(await first).toEqual({ lines: 1, from: 'bob' });
+        });
+    });
 });

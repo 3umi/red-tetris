@@ -138,7 +138,7 @@ export const createApp = () => {
       }
       socket.emit('pieces', { pieces: piecesFrom(game, from) });
     });
-    
+
     socket.on('boardChanged', (data: unknown) => {
       const game = currentGame();
       if (!game || !game.started) {
@@ -153,6 +153,30 @@ export const createApp = () => {
         return;
       }
       socket.to(game.name).emit('spectrum', { name: sender.name, spectrum });
+    });
+
+    socket.on('linesCleared', (data: unknown) => {
+      const game = currentGame();
+      if (!game || !game.started) {
+        return;
+      }
+      const sender = game.players.find((player) => player.id === socket.id);
+      if (!sender || !sender.alive) {
+        return;
+      }
+      const { count } = (data ?? {}) as { count?: unknown };
+      if (typeof count !== 'number' || !Number.isInteger(count) || count < 1 || count > 4) {
+        return;
+      }
+      const lines = count - 1;
+      if (!lines) {
+        return;
+      }
+      game.players.forEach((player) => {
+        if (player.alive && player.id !== socket.id) {
+          io.to(player.id).emit('penalty', { lines, from: sender.name });
+        }
+      });
     });
   });
 
