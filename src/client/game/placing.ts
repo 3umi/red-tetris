@@ -1,16 +1,19 @@
 // Finishing places for the game-over screen. Only the round's players count: the
-// winner and everyone in `outOrder`. Someone who joined after the round has no place.
+// `roster` taken when it started, plus anyone the server reports in `outOrder` or as the
+// winner. Someone who joined after the round has no place, and neither does someone who
+// left before losing, though they still count towards the total.
 
-type Round = { outOrder: string[]; winner: string | null };
+type Round = { roster: string[]; outOrder: string[]; winner: string | null };
 
-export const roundSize = ({ outOrder, winner }: Round): number => outOrder.length + (winner ? 1 : 0);
+export const roundSize = ({ roster, outOrder, winner }: Round): number =>
+    new Set([...roster, ...outOrder, ...(winner ? [winner] : [])]).size;
 
-export const placeOf = (name: string, round: Round): number | null => {
-    if (name === round.winner) {
+export const placeOf = (name: string, { outOrder, winner }: Round): number | null => {
+    if (name === winner) {
         return 1;
     }
-    const index = round.outOrder.indexOf(name);
-    return index === -1 ? null : roundSize(round) - index;
+    const index = outOrder.indexOf(name);
+    return index === -1 ? null : (winner ? 1 : 0) + outOrder.length - index;
 };
 
 export const ordinal = (n: number): string => {

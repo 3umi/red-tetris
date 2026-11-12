@@ -17,6 +17,8 @@ export type RoomState = {
     phase: Phase;
     error: string | null;
     opponents: Record<string, Opponent>;
+    // Everyone in the current or last round, including players who have since left.
+    roster: string[];
     // Names in the order they were knocked out, first out first.
     outOrder: string[];
     winner: string | null;
@@ -30,6 +32,7 @@ export const initialRoom: RoomState = {
     phase: 'joining',
     error: null,
     opponents: {},
+    roster: [],
     outOrder: [],
     winner: null,
 };
@@ -46,22 +49,33 @@ const roomSlice = createSlice({
             me: action.payload.player,
         }),
         joinFailed: (state, action: PayloadAction<string>) => ({ ...state, error: action.payload }),
-        roomUpdated: (state, action: PayloadAction<{ host: string; players: string[] }>) => ({
-            ...state,
-            host: action.payload.host,
-            players: action.payload.players,
-            phase: state.phase === 'joining' ? 'lobby' : state.phase,
-            opponents: Object.fromEntries(action.payload.players
-                .filter((name) => name !== state.me)
-                .map((name) => [name, state.opponents[name] ?? { name, status: 'playing', spectrum: emptySpectrum() }])),
-        }),
+        roomUpdated: (state, action: PayloadAction<{ host: string; players: string[] }>) => {
+            const { host, players } = action.payload;
+            // The round's players stay listed until the next round starts, so the results
+            // still show someone who left. Leaving mid-round puts them out.
+            const leftRound = (name: string) => !players.includes(name);
+            const names = [...new Set([...players, ...state.roster])].filter((name) => name !== state.me);
+            const opponent = (name: string): Opponent => {
+                const known = state.opponents[name] ?? { name, status: 'playing', spectrum: emptySpectrum() };
+                return leftRound(name) && known.status === 'playing' ? { ...known, status: 'out' } : known;
+            };
+            return {
+                ...state,
+                host,
+                players,
+                phase: state.phase === 'joining' ? 'lobby' : state.phase,
+                opponents: Object.fromEntries(names.map((name) => [name, opponent(name)])),
+            };
+        },
         startRequested: (state) => state,
         roundStarted: (state) => ({
             ...state,
             phase: 'playing',
+            roster: state.players,
             outOrder: [],
             winner: null,
             opponents: Object.fromEntries(Object.values(state.opponents)
+                .filter((opponent) => state.players.includes(opponent.name))
                 .map((opponent) => [opponent.name, { ...opponent, status: 'playing', spectrum: emptySpectrum() }])),
         }),
         spectrumUpdated: (state, action: PayloadAction<{ name: string; spectrum: number[] }>) => {

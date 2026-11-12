@@ -42,6 +42,7 @@ const states: Record<string, Partial<RootState>> = {
         room: {
             ...room,
             phase: 'playing',
+            roster: room.players,
             outOrder: ['youssef'],
             opponents: Object.fromEntries([
                 opponent('sara', 'playing', [6, 7, 7, 5, 4, 6, 8, 7, 5, 4]),
@@ -62,6 +63,7 @@ const states: Record<string, Partial<RootState>> = {
         room: {
             ...room,
             phase: 'over',
+            roster: room.players,
             outOrder: ['youssef', 'adam', 'oumaima'],
             winner: 'sara',
             opponents: Object.fromEntries([

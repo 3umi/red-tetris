@@ -29,8 +29,10 @@ export const createSocketMiddleware = (connect: () => GameSocket): Middleware<ob
         socket.on('joinError', (message) => store.dispatch(joinFailed(message)));
         socket.on('gameStarted', ({ pieces }) => {
             requested.splice(0);
-            store.dispatch(roundStarted());
+            // Replace the old game first: the last winner's game is still 'playing', and
+            // reporting on it would ask the new round for pieces at the old index.
             store.dispatch(started(pieces));
+            store.dispatch(roundStarted());
         });
         socket.on('pieces', ({ pieces }) => store.dispatch(piecesReceived(pieces)));
         socket.on('spectrum', (data) => store.dispatch(spectrumUpdated(data)));
@@ -41,7 +43,7 @@ export const createSocketMiddleware = (connect: () => GameSocket): Middleware<ob
 
     // Tell the server what changed on our own board after an action.
     const report = (before: GameState, after: GameState, socket: GameSocket) => {
-        if (after.locks !== before.locks) {
+        if (after.locks > before.locks) {
             socket.emit('boardChanged', { spectrum: getSpectrum(after.board) });
             if (after.cleared > 1) {
                 socket.emit('linesCleared', { count: after.cleared });

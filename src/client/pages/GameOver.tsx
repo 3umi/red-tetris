@@ -22,7 +22,10 @@ export const GameOver = () => {
             return 'Winner';
         }
         const place = placeOf(name, room);
-        return place ? ordinal(place) : 'Joined';
+        if (place) {
+            return ordinal(place);
+        }
+        return room.roster.includes(name) ? 'Left' : 'Joined';
     };
 
     return (

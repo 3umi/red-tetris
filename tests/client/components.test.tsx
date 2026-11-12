@@ -156,6 +156,26 @@ describe('room', () => {
         act(() => server.serverSends('roomUpdate', { host: 'oumaima', players: ['oumaima', 'sara'] }));
         expect(screen.getByText('2 of 2 still playing')).toBeTruthy();
     });
+    it('shows the win when the only opponent disconnects mid-round', () => {
+        const { server } = joinAsHost();
+        act(() => server.serverSends('gameStarted', { pieces: ['T'] }));
+        act(() => server.serverSends('roomUpdate', { host: 'oumaima', players: ['oumaima'] }));
+        act(() => server.serverSends('gameOver', { winner: 'oumaima', lost: [] }));
+        expect(screen.getByRole('heading', { name: 'You win' })).toBeTruthy();
+        expect(screen.getByText('You finished 1st of 2')).toBeTruthy();
+        expect(screen.getByText('Left')).toBeTruthy();
+    });
+    it('still lists a player who lost and then left on the game-over screen', () => {
+        const app = renderApp('/pelicans/oumaima');
+        const server = app.connections.last();
+        act(() => server.serverSends('roomUpdate', { host: 'oumaima', players: ['oumaima', 'sara', 'adam'] }));
+        act(() => server.serverSends('gameStarted', { pieces: ['T'] }));
+        act(() => server.serverSends('playerOut', { name: 'adam' }));
+        act(() => server.serverSends('roomUpdate', { host: 'oumaima', players: ['oumaima', 'sara'] }));
+        act(() => server.serverSends('gameOver', { winner: 'sara', lost: ['adam', 'oumaima'] }));
+        expect(screen.getByText('You finished 2nd of 3')).toBeTruthy();
+        expect(screen.getByText('3rd')).toBeTruthy();
+    });
     it('leaves the room and goes home', () => {
         const { server } = joinAsHost();
         act(() => server.serverSends('gameStarted', { pieces: ['T'] }));

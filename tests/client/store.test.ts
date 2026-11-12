@@ -28,7 +28,7 @@ describe('room reducer', () => {
         const state = room(playing, roomUpdated({ host: 'oumaima', players: ['oumaima', 'sara'] }));
         expect(state.phase).toBe('playing');
         expect(state.opponents.sara.spectrum[9]).toBe(10);
-        expect(state.opponents.adam).toBeUndefined();
+        expect(state.opponents.adam.status).toBe('out');
     });
     it('stores join errors', () => {
         expect(room(joined, joinFailed('taken')).error).toBe('taken');
@@ -67,6 +67,20 @@ describe('room reducer', () => {
         expect(state.phase).toBe('over');
         expect(state.opponents.yasmine.status).toBe('playing');
     });
+    it('keeps the round\'s players listed after they leave, until the next round', () => {
+        const over = [roundStarted(), playerOut('adam'), roundOver({ winner: 'sara', lost: ['adam', 'oumaima'] })]
+            .reduce(room, joined);
+        const left = room(over, roomUpdated({ host: 'oumaima', players: ['oumaima', 'sara'] }));
+        expect(left.opponents.adam.status).toBe('out');
+        expect(left.roster).toEqual(['oumaima', 'sara', 'adam']);
+        const next = room(left, roundStarted());
+        expect(next.opponents.adam).toBeUndefined();
+        expect(next.roster).toEqual(['oumaima', 'sara']);
+    });
+    it('marks a player who leaves mid-round as out', () => {
+        const state = room(room(joined, roundStarted()), roomUpdated({ host: 'oumaima', players: ['oumaima', 'sara'] }));
+        expect(state.opponents.adam.status).toBe('out');
+    });
     it('leaves no change for requests handled by middleware', () => {
         expect(room(joined, startRequested())).toBe(joined);
     });
@@ -76,10 +90,16 @@ describe('room reducer', () => {
 });
 
 describe('placing', () => {
-    const round = { outOrder: ['d', 'c', 'b'], winner: 'a' };
+    const round = { roster: ['a', 'b', 'c', 'd'], outOrder: ['d', 'c', 'b'], winner: 'a' };
     it('counts only the players of the round', () => {
         expect(roundSize(round)).toBe(4);
-        expect(roundSize({ outOrder: ['me'], winner: null })).toBe(1);
+        expect(roundSize({ roster: ['me'], outOrder: ['me'], winner: null })).toBe(1);
+    });
+    it('counts players who left without losing, and places the others among those who finished', () => {
+        const left = { roster: ['a', 'b', 'c'], outOrder: ['c'], winner: 'a' };
+        expect(roundSize(left)).toBe(3);
+        expect(placeOf('c', left)).toBe(2);
+        expect(placeOf('b', left)).toBe(null);
     });
     it('gives the winner first place and the first out last place', () => {
         expect(placeOf('a', round)).toBe(1);
@@ -190,6 +210,17 @@ describe('socket middleware', () => {
         server.serverSends('gameOver', { winner: null, lost: ['oumaima'] });
         server.serverSends('gameStarted', { pieces: ['S', 'Z', 'L'] });
         expect(server.sent('requestPieces')).toEqual([{ from: 3 }, { from: 3 }]);
+    });
+    it('starts the new round before asking for pieces, when the last winner was still playing', () => {
+        const { store, server } = setup();
+        server.serverSends('gameStarted', { pieces: ['I', 'O', 'T', 'S', 'Z', 'J', 'L', 'I', 'O', 'T'] });
+        store.dispatch(hardDropped());
+        server.serverSends('gameOver', { winner: 'oumaima', lost: ['sara'] });
+        expect(store.getState().game.status).toBe('playing');
+        const before = server.sent('requestPieces').length;
+        server.serverSends('gameStarted', { pieces: ['S', 'Z', 'L'] });
+        expect(server.sent('requestPieces').slice(before)).toEqual([{ from: 3 }]);
+        expect(server.sent('boardChanged')).toHaveLength(1);
     });
     it('closes the old connection when joining again or leaving', () => {
         const { store, connections } = setup();
