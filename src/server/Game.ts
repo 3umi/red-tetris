@@ -34,7 +34,7 @@ export class Game {
         }
         this.players.push(new Player(name, id));
         if (!this.host) {
-            this.host = name;
+            this.host = id;
         }
         return null;
     }
@@ -50,13 +50,13 @@ export class Game {
             this.host = null;
             return;
         }
-        if (this.host === leaving.name) {
-            this.host = this.players[0].name;
+        if (this.host === leaving.id) {
+            this.host = this.players[0].id;
         }
     }
     
-    start(name: string): StartError | null {
-        if (this.host !== name) {
+    start(id: string): StartError | null {
+        if (this.host !== id) {
             return 'notHost';
         }
         if (this.started) {
