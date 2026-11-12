@@ -107,7 +107,7 @@ export class Game {
     }
     
     isEmpty(): boolean {
-        return (this.players.length === 0);
+        return this.players.length === 0;
     }
 
     private endRoundIfOver(): void {

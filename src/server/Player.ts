@@ -1,5 +1,5 @@
-import { type PieceType} from '../shared/pieces';
-import { Piece } from './Piece';
+import type { PieceType} from '../shared/pieces';
+import type { Piece } from './Piece';
 
 export class Player {
     name: string;
