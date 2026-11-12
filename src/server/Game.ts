@@ -3,7 +3,6 @@ import { Player } from './Player';
 
 export type JoinError = 'nameTaken' | 'gameStarted';
 export type StartError = 'notHost' | 'alreadyStarted';
-export type RestartError = 'notHost' | 'notOver';
 
 export class Game {
     name: string;
@@ -63,6 +62,10 @@ export class Game {
         if (this.started) {
             return 'alreadyStarted';
         }
+        this.players.forEach((player) => player.reset());
+        this.piece = new Piece();
+        this.lastWinner = null;
+        this.lost = [];
         this.multiplayer = this.players.length > 1;
         this.started = true;
         return null;
@@ -100,19 +103,6 @@ export class Game {
         if (this.multiplayer && alive.length === 1) {
             return alive[0].name;
         }
-        return null;
-    }
-    
-    restart(name: string): RestartError | null {
-        if (this.host !== name) {
-            return 'notHost';
-        }
-        if (!this.isOver()) {
-            return 'notOver';
-        }
-        this.started = false;
-        this.players.forEach((player) => player.reset());
-        this.piece = new Piece();
         return null;
     }
     
