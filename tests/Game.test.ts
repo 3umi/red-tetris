@@ -118,7 +118,7 @@ describe('Game', () => {
         expect(game.winner()).toBe('Bob');
     });
 
-    it('is over with no winner when the last players lose together', () => {
+    it('is over with no winner when nobody is alive', () => {
         const game = gameWith(['Alice', 'Bob']);
         game.start('id1');
         game.players[0].lose();
