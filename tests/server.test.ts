@@ -186,4 +186,31 @@ describe('disconnect', () => {
             expect(await over).toEqual({ winner: 'alice', lost: [] });
         });
     });
+    describe('requestPieces', () => {
+        it('sends the next pieces to the player who asks', async () => {
+            const a = await client();
+            const b = await client();
+            await join(a, 'r', 'alice');
+            await join(b, 'r', 'bob');
+            const started = next(b, 'gameStarted');
+            a.emit('startGame');
+            await started;
+            const answer = next<{ pieces: string[] }>(b, 'pieces');
+            b.emit('requestPieces', { from: 7 });
+            const { pieces } = await answer;
+            expect([...pieces].sort()).toEqual(['I', 'J', 'L', 'O', 'S', 'T', 'Z']);
+        });
+        it('ignores a request far ahead of the dealt pieces', async () => {
+            const a = await client();
+            await join(a, 'r', 'alice');
+            const started = next(a, 'gameStarted');
+            a.emit('startGame');
+            await started;
+            const error = next<string>(a, 'joinError');
+            a.emit('requestPieces', { from: 1000000 });
+            a.emit('joinRoom', { room: 'r', player: 'alice' });
+            await error;
+            expect(server.rooms.get('r')?.piece.types.length).toBe(7);
+        });
+    });
 });

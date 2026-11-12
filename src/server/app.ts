@@ -122,6 +122,18 @@ export const createApp = () => {
         io.to(game.name).emit('gameOver', { winner: game.lastWinner, lost: game.lost });
       }
     });
+
+    socket.on('requestPieces', (data: unknown) => {
+      const game = currentGame();
+      if (!game || !game.started) {
+        return;
+      }
+      const { from } = (data ?? {}) as { from?: unknown };
+      if (typeof from !== 'number' || !Number.isInteger(from) || from < 0 || from > game.piece.types.length) {
+        return;
+      }
+      socket.emit('pieces', { pieces: piecesFrom(game, from) });
+    });
   });
 
   return { app, httpServer, io, rooms };
