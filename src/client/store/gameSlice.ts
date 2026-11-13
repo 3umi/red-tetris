@@ -12,7 +12,7 @@ const gameSlice = createSlice({
         movedLeft: (state) => engine.shift(state, -1),
         movedRight: (state) => engine.shift(state, 1),
         rotated: (state) => engine.rotate(state),
-        softDropped: (state) => engine.tick(state),
+        softDropped: (state) => engine.softDrop(state),
         hardDropped: (state) => engine.drop(state),
         penaltyReceived: (state, action: PayloadAction<{ lines: number; from: string }>) =>
             engine.receivePenalty(state, action.payload.lines, action.payload.from),
