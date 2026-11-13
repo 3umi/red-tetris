@@ -1,5 +1,6 @@
 import { Board } from '../components/Board';
 import { Spectrum } from '../components/Spectrum';
+import { formatScore } from '../scores/format';
 import { useAppSelector, useControls, useGravity } from '../hooks/hooks';
 import type { Opponent } from '../store/roomSlice';
 
@@ -25,6 +26,7 @@ export const OpponentList = ({ opponents, label = (o) => STATUS_LABEL[o.status] 
 export const Game = ({ onLeave }: { onLeave: () => void }) => {
     const { room, players, outOrder, opponents } = useAppSelector((state) => state.room);
     const game = useAppSelector((state) => state.game);
+    const mine = useAppSelector((state) => state.scores.mine);
     const playing = game.status === 'playing';
     useGravity(playing);
     useControls(playing);
@@ -42,6 +44,17 @@ export const Game = ({ onLeave }: { onLeave: () => void }) => {
                 <div className="display penalty-count" aria-label="Red lines under you">{game.penalty}</div>
                 <div className="penalty-label">Red lines under you</div>
                 {game.lastPenaltyFrom && <div className="muted">{`Last sent by ${game.lastPenaltyFrom}`}</div>}
+                <dl className="stats">
+                    <div>
+                        <dt>Score</dt>
+                        <dd className="display" aria-label="Score">{formatScore(game.score)}</dd>
+                    </div>
+                    <div>
+                        <dt>Lines</dt>
+                        <dd className="display" aria-label="Lines">{game.lines}</dd>
+                    </div>
+                </dl>
+                {mine && <div className="muted">{`Your best ${formatScore(mine.best)}`}</div>}
                 <div className="spacer" />
                 <button className="leave" onClick={onLeave}>Leave game</button>
             </section>

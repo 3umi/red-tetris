@@ -14,6 +14,7 @@ import { Board } from '../../src/client/components/Board';
 import { FALL_INTERVAL_MS } from '../../src/client/hooks/hooks';
 import { createBoard } from '../../src/shared/board';
 import { fakeConnections } from './fakeSocket';
+import { createScoreBook, type ScoreBook } from '../../src/client/scores/scoreBook';
 
 afterEach(() => {
     cleanup();
@@ -22,9 +23,10 @@ afterEach(() => {
 
 const Location = () => <div data-testid="location">{useLocation().pathname}</div>;
 
-const renderApp = (path: string, options: { preloadedState?: Partial<RootState> } = {}) => {
+const renderApp = (path: string, options: { preloadedState?: Partial<RootState>; scoreBook?: ScoreBook } = {}) => {
     const connections = fakeConnections();
-    const store = createStore({ connect: connections.connect, ...options });
+    // A fresh in-memory score book, so saved scores never leak between tests.
+    const store = createStore({ connect: connections.connect, scoreBook: createScoreBook(null), ...options });
     render(
         <Provider store={store}>
             <MemoryRouter initialEntries={[path]}>
@@ -200,6 +202,7 @@ describe('room', () => {
 describe('game over', () => {
     const over = (me: string, winner: string | null) => {
         const store = createStore({
+            scoreBook: createScoreBook(null),
             preloadedState: {
                 room: {
                     ...initialRoom, room: 'pelicans', me, host: 'oumaima', phase: 'over', winner,
@@ -228,6 +231,53 @@ describe('game over', () => {
     it('only lets the host restart', () => {
         over('adam', 'sara');
         expect(screen.getByRole('button', { name: 'Restart game' })).toHaveProperty('disabled', true);
+    });
+});
+
+describe('scores', () => {
+    const playedBefore = () => {
+        const book = createScoreBook(null);
+        book.record('oumaima', { score: 1200, won: true });
+        book.record('sara', { score: 4800, won: false });
+        return book;
+    };
+
+    it('lists the best scores on this device on the home page', () => {
+        renderApp('/', { scoreBook: playedBefore() });
+        const list = within(screen.getByRole('list', { name: 'Best scores' }));
+        expect(list.getAllByRole('listitem').map((item) => item.textContent)).toEqual(['sara4,800', 'oumaima1,200']);
+    });
+    it('shows no list before anyone has scored', () => {
+        renderApp('/');
+        expect(screen.queryByRole('list', { name: 'Best scores' })).toBe(null);
+    });
+    it('shows my record in the lobby, my score while playing, and a new best at the end', () => {
+        const app = renderApp('/pelicans/oumaima', { scoreBook: playedBefore() });
+        const server = app.connections.last();
+        act(() => server.serverSends('roomUpdate', { host: 'oumaima', players: ['oumaima', 'sara'] }));
+        expect(screen.getByText('Best 1,200 · 1 round · 1 win')).toBeTruthy();
+
+        act(() => server.serverSends('gameStarted', { pieces: ['T', 'O', 'I', 'S', 'Z', 'J', 'L', 'T'] }));
+        expect(screen.getByLabelText('Score').textContent).toBe('0');
+        expect(screen.getByText('Your best 1,200')).toBeTruthy();
+        key(' ');
+        const score = app.store.getState().game.score;
+        expect(screen.getByLabelText('Score').textContent).toBe(String(score));
+        expect(screen.getByLabelText('Lines').textContent).toBe('0');
+
+        act(() => server.serverSends('gameOver', { winner: 'sara', lost: ['oumaima'] }));
+        expect(screen.getByText(`Score ${score}`)).toBeTruthy();
+        expect(screen.queryByText('New best')).toBe(null);
+        expect(screen.getByText('Best 1,200')).toBeTruthy();
+    });
+    it('marks a new best on the game-over screen', () => {
+        const app = renderApp('/solo/newcomer');
+        const server = app.connections.last();
+        act(() => server.serverSends('roomUpdate', { host: 'newcomer', players: ['newcomer'] }));
+        act(() => server.serverSends('gameStarted', { pieces: ['T', 'O', 'I', 'S', 'Z', 'J', 'L', 'T'] }));
+        key(' ');
+        act(() => server.serverSends('gameOver', { winner: null, lost: ['newcomer'] }));
+        expect(screen.getByText('New best')).toBeTruthy();
     });
 });
 

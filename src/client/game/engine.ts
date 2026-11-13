@@ -20,6 +20,10 @@ export type GameState = {
     // Red lines received this round, and who sent the last ones.
     penalty: number;
     lastPenaltyFrom: string | null;
+    // Points and lines cleared this round. The score is a bonus: the winner is still
+    // the last player standing.
+    score: number;
+    lines: number;
 };
 
 export const initialGame: GameState = {
@@ -31,7 +35,14 @@ export const initialGame: GameState = {
     cleared: 0,
     penalty: 0,
     lastPenaltyFrom: null,
+    score: 0,
+    lines: 0,
 };
+
+// Points for clearing 1 to 4 lines with one piece, and for each row a piece is dropped.
+export const LINE_POINTS = [0, 100, 300, 500, 800];
+export const SOFT_DROP_POINTS = 1;
+export const HARD_DROP_POINTS = 2;
 
 const spawn = (state: GameState): GameState => {
     if (state.status !== 'playing' || state.piece || state.queue.length === 0) {
@@ -53,7 +64,10 @@ export const receivePieces = (state: GameState, types: PieceType[]): GameState =
 
 const lock = (state: GameState, piece: Piece): GameState => {
     const { board, cleared } = clearLines(lockPiece(state.board, piece));
-    return spawn({ ...state, board, piece: null, locks: state.locks + 1, cleared });
+    return spawn({
+        ...state, board, piece: null, locks: state.locks + 1, cleared,
+        score: state.score + LINE_POINTS[cleared], lines: state.lines + cleared,
+    });
 };
 
 const withPiece = (state: GameState, update: (board: Board, piece: Piece) => Piece): GameState => {
@@ -78,11 +92,20 @@ export const tick = (state: GameState): GameState => {
     return moved === state.piece ? lock(state, state.piece) : { ...state, piece: moved };
 };
 
+// The player pressing down: one step of gravity, worth a point if the piece moved.
+export const softDrop = (state: GameState): GameState => {
+    const next = tick(state);
+    const fell = next.locks === state.locks && next.piece !== state.piece;
+    return fell ? { ...next, score: next.score + SOFT_DROP_POINTS } : next;
+};
+
 export const drop = (state: GameState): GameState => {
     if (state.status !== 'playing' || !state.piece) {
         return state;
     }
-    return lock(state, hardDrop(state.board, state.piece));
+    const landed = hardDrop(state.board, state.piece);
+    const rows = landed.y - state.piece.y;
+    return lock({ ...state, score: state.score + rows * HARD_DROP_POINTS }, landed);
 };
 
 // Pushes the falling piece up until it fits again, by at most `rows` rows.
