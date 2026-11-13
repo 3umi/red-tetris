@@ -4,6 +4,7 @@ import { pelicanOnDark } from '../art/pelican';
 import { createBoard } from '../../shared/board';
 import { useAppDispatch, useAppSelector } from '../hooks/hooks';
 import { startRequested } from '../store/roomSlice';
+import { describeRecord } from '../scores/format';
 
 // The pile shown on the lobby board in Design.pdf, as a hint of what is coming.
 const PILE = ['0000004400', '0003044000', '0073305500', '7773226550', '1111226660'];
@@ -22,6 +23,7 @@ const RED_LINES = [
 export const Lobby = () => {
     const dispatch = useAppDispatch();
     const { room, me, host, players } = useAppSelector((state) => state.room);
+    const mine = useAppSelector((state) => state.scores.mine);
     const isHost = me === host;
 
     const tag = (name: string) => [name === host && 'Host', name === me && (name === host ? 'you' : 'You')]
@@ -33,6 +35,7 @@ export const Lobby = () => {
                 <div className="logo">Red Tetris</div>
                 <h1 className="display room-name">{room}</h1>
                 <div className="room-url">{`${window.location.host}/${room}/${me}`}</div>
+                {mine && <div className="muted my-record">{describeRecord(mine)}</div>}
                 <ul className="players" aria-label="Players">
                     {players.map((name) => (
                         <li key={name}>

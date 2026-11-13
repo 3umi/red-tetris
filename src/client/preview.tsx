@@ -6,6 +6,8 @@ import { initialGame } from './game/engine';
 import { Lobby } from './pages/Lobby';
 import { Game } from './pages/Game';
 import { GameOver } from './pages/GameOver';
+import { Home } from './pages/Home';
+import { createScoreBook } from './scores/scoreBook';
 
 // DEVELOPMENT ONLY: renders each screen with the example data from Design.pdf, so the
 // screens can be compared with the design without a full multiplayer round.
@@ -25,6 +27,16 @@ const OVER_BOARD = board([
     '2201111063', '8888888888', '8888888888', '8888888888', '8888888888', '8888888888',
 ]);
 
+// Example records, kept in memory so the preview never touches real saved scores.
+const exampleBook = () => {
+    const book = createScoreBook(null);
+    [['sara', 4820, true], ['oumaima', 3260, true], ['adam', 2140, false], ['youssef', 980, false]]
+        .forEach(([name, score, won]) => book.record(name as string, { score: score as number, won: won as boolean }));
+    book.record('oumaima', { score: 1200, won: false });
+    return book;
+};
+const mine = { name: 'oumaima', best: 3260, rounds: 2, wins: 1 };
+
 const opponent = (name: string, status: Opponent['status'], spectrum: number[]): [string, Opponent] =>
     [name, { name, status, spectrum }];
 
@@ -37,7 +49,8 @@ const room = {
 };
 
 const states: Record<string, Partial<RootState>> = {
-    lobby: { room: { ...room, phase: 'lobby' } },
+    home: {},
+    lobby: { room: { ...room, phase: 'lobby' }, scores: { mine, newBest: false, top: [] } },
     game: {
         room: {
             ...room,
@@ -57,7 +70,10 @@ const states: Record<string, Partial<RootState>> = {
             piece: { type: 'T', shape: [[0, 1, 0], [1, 1, 1], [0, 0, 0]], x: 3, y: 5 },
             penalty: 2,
             lastPenaltyFrom: 'adam',
+            score: 2340,
+            lines: 9,
         },
+        scores: { mine, newBest: false, top: [] },
     },
     over: {
         room: {
@@ -72,15 +88,16 @@ const states: Record<string, Partial<RootState>> = {
                 opponent('youssef', 'out', [16, 17, 18, 17, 15, 16, 17, 18, 16, 14]),
             ]),
         },
-        game: { ...initialGame, status: 'lost', board: OVER_BOARD },
+        game: { ...initialGame, status: 'lost', board: OVER_BOARD, score: 3620, lines: 14 },
+        scores: { mine: { ...mine, best: 3620, rounds: 3 }, newBest: true, top: [] },
     },
 };
 
-const SCREENS = { lobby: Lobby, game: () => <Game onLeave={() => undefined} />, over: GameOver };
+const SCREENS = { home: () => <Home />, lobby: Lobby, game: () => <Game onLeave={() => undefined} />, over: GameOver };
 
 export const Preview = ({ screen }: { screen: string }) => {
     const Screen = SCREENS[screen as keyof typeof SCREENS] ?? Lobby;
-    const store = createStore({ preloadedState: states[screen] ?? states.lobby });
+    const store = createStore({ preloadedState: states[screen] ?? states.lobby, scoreBook: exampleBook() });
     return (
         <Provider store={store}>
             <MemoryRouter>
