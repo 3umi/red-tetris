@@ -16,4 +16,6 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck
-      - run: npm test
+      # Fails if coverage drops under the subject's thresholds (see vitest.config.ts).
+      - run: npm run coverage
+      - run: npm run build

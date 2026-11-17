@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import type { AddressInfo } from 'node:net';
 import { io as connect, type Socket } from 'socket.io-client';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join as joinPath } from 'node:path';
 import { createApp } from '../src/server/app';
 
 type RoomUpdate = { host: string; players: string[] };
@@ -26,7 +29,10 @@ const join = async (socket: Socket, room: string, player: string) => {
 
 beforeEach(async () => {
     clients = [];
-    server = createApp();
+    const clientDir = mkdtempSync(joinPath(tmpdir(), 'red-tetris-client-'));
+    writeFileSync(joinPath(clientDir, 'index.html'), '<title>Red Tetris</title><div id="root"></div>');
+    writeFileSync(joinPath(clientDir, 'bundle.js'), 'console.log("bundle")');
+    server = createApp({ clientDir });
     await new Promise<void>((resolve) => server.httpServer.listen(0, resolve));
     url = `http://localhost:${(server.httpServer.address() as AddressInfo).port}`;
 });
@@ -41,9 +47,13 @@ describe('http', () => {
         const res = await fetch(url);
         expect(await res.text()).toContain('Red Tetris');
     });
-    it('serves the room page', async () => {
+    it('serves the app for a room URL', async () => {
         const res = await fetch(`${url}/room/alice`);
-        expect(await res.text()).toContain('joinRoom');
+        expect(await res.text()).toContain('<div id="root">');
+    });
+    it('serves the bundle', async () => {
+        const res = await fetch(`${url}/bundle.js`);
+        expect(await res.text()).toContain('bundle');
     });
 });
 

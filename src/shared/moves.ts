@@ -19,3 +19,8 @@ export const createPiece = (type: PieceType): Piece => {
 export const canSpawn = (board: Board, piece: Piece): boolean => {
     return isValid(board, piece);
 };
+
+export const hardDrop = (board: Board, piece: Piece): Piece => {
+    const next = move(board, piece, 0, 1);
+    return next === piece ? piece : hardDrop(board, next);
+};
