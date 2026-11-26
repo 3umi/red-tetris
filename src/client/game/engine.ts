@@ -1,5 +1,6 @@
+import { stat } from 'node:fs';
 import { createBoard, isValid, lockPiece, clearLines, addPenalty, type Board } from '../../shared/board';
-import { GameMode } from '../../shared/modes';
+import type { GameMode } from '../../shared/modes';
 import { move, rotatePiece, createPiece, canSpawn, hardDrop } from '../../shared/moves';
 import type { Piece, PieceType } from '../../shared/pieces';
 
@@ -7,6 +8,10 @@ import type { Piece, PieceType } from '../../shared/pieces';
 // and returns a new one, so the Redux slice is only a thin wrapper around them.
 
 export type Status = 'idle' | 'playing' | 'lost';
+export const FALL_INTERVAL_MS = 800;
+export const LINES_PER_LEVEL = 4;
+export const FALL_STEP_MS = 100;
+export const MIN_FALL_MS = 100;
 
 export type GameState = {
     status: Status;
@@ -39,7 +44,7 @@ export const initialGame: GameState = {
     lastPenaltyFrom: null,
     score: 0,
     lines: 0,
-    mode: 'classic'
+    mode: 'classic',
 };
 
 // Points for clearing 1 to 4 lines with one piece, and for each row a piece is dropped.
@@ -131,3 +136,11 @@ export const receivePenalty = (state: GameState, lines: number, from: string): G
     }
     return { ...penalised, piece };
 };
+
+export const fallInterval = (state: GameState): number => {
+    if (state.mode !== 'gravity') {
+        return FALL_INTERVAL_MS;
+    }
+    const level = Math.floor(state.lines / LINES_PER_LEVEL)
+    return Math.max(MIN_FALL_MS, FALL_INTERVAL_MS - level * FALL_STEP_MS)
+}

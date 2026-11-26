@@ -6,18 +6,15 @@ import { ticked, movedLeft, movedRight, rotated, softDropped, hardDropped } from
 export const useAppDispatch = useDispatch.withTypes<AppDispatch>();
 export const useAppSelector = useSelector.withTypes<RootState>();
 
-// Pieces fall at a constant speed.
-export const FALL_INTERVAL_MS = 800;
-
-export const useGravity = (active: boolean) => {
+export const useGravity = (active: boolean, delay: number) => {
     const dispatch = useAppDispatch();
     useEffect(() => {
         if (!active) {
             return undefined;
         }
-        const id = setInterval(() => dispatch(ticked()), FALL_INTERVAL_MS);
+        const id = setInterval(() => dispatch(ticked()), delay);
         return () => clearInterval(id);
-    }, [active, dispatch]);
+    }, [active, delay, dispatch]);
 };
 
 const KEYS = {

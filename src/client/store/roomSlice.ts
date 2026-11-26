@@ -1,5 +1,5 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import { GameMode } from '../../shared/modes';
+import { type GameMode } from '../../shared/modes';
 
 export type Phase = 'joining' | 'lobby' | 'playing' | 'over';
 export type OpponentStatus = 'playing' | 'out' | 'winner';
@@ -68,7 +68,7 @@ const roomSlice = createSlice({
                 opponents: Object.fromEntries(names.map((name) => [name, opponent(name)])),
             };
         },
-        startRequested: (state, action: PayloadAction<GameMode | undefined>) => state,
+        startRequested: (state, _action: PayloadAction<GameMode | undefined>) => state,
         roundStarted: (state) => ({
             ...state,
             phase: 'playing',

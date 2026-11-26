@@ -2,6 +2,7 @@ import { Board } from '../components/Board';
 import { Spectrum } from '../components/Spectrum';
 import { formatScore } from '../scores/format';
 import { useAppSelector, useControls, useGravity } from '../hooks/hooks';
+import { fallInterval } from '../game/engine';
 import type { Opponent } from '../store/roomSlice';
 
 const STATUS_LABEL = { playing: 'Playing', out: 'Out', winner: 'Winner' } as const;
@@ -28,7 +29,7 @@ export const Game = ({ onLeave }: { onLeave: () => void }) => {
     const game = useAppSelector((state) => state.game);
     const mine = useAppSelector((state) => state.scores.mine);
     const playing = game.status === 'playing';
-    useGravity(playing);
+    useGravity(playing, fallInterval(game));
     useControls(playing);
 
     // Count from the room's current players: someone who lost and then left is in

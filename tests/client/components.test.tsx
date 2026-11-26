@@ -11,7 +11,7 @@ import { GameOver } from '../../src/client/pages/GameOver';
 import { PixelArt } from '../../src/client/components/PixelArt';
 import { Spectrum } from '../../src/client/components/Spectrum';
 import { Board } from '../../src/client/components/Board';
-import { FALL_INTERVAL_MS } from '../../src/client/hooks/hooks';
+import { FALL_INTERVAL_MS } from '../../src/client/game/engine';
 import { createBoard } from '../../src/shared/board';
 import { fakeConnections } from './fakeSocket';
 import { createScoreBook, type ScoreBook } from '../../src/client/scores/scoreBook';

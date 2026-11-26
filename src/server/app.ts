@@ -108,7 +108,7 @@ export const createApp = ({ clientDir = DEFAULT_CLIENT_DIR }: { clientDir?: stri
       if (error) {
         return;
       }
-      io.to(game.name).emit('gameStarted', { pieces: piecesFrom(game, 0), mode: game.mode  });
+      io.to(game.name).emit('gameStarted', { pieces: piecesFrom(game, 0), mode: game.mode });
     });
 
     socket.on('lost', () => {
