@@ -178,6 +178,60 @@ button, input {
     bottom: 0;
 }
 
+/* Best scores saved on this device, beside the form */
+
+.home-body {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    column-gap: 72px;
+}
+
+.best-scores {
+    width: 300px;
+    max-width: 100%;
+    margin-top: 30px;
+}
+
+.best-scores-title {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.best-scores ol {
+    margin: 8px 0 0;
+    padding: 0;
+    border-top: 2px solid var(--ink);
+    list-style: none;
+    counter-reset: place;
+}
+
+.best-scores li {
+    display: flex;
+    gap: 12px;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--rule);
+    font-size: 13px;
+    counter-increment: place;
+}
+
+.best-scores li::before {
+    content: counter(place);
+    width: 16px;
+    color: var(--muted);
+}
+
+.best-scores li span:first-child {
+    flex: 1;
+    overflow-wrap: anywhere;
+}
+
+.best-scores li span:last-child {
+    font-weight: 600;
+}
+
 /* ---------- Room layout: three columns ---------- */
 
 .room {
@@ -464,6 +518,36 @@ button, input {
     background: currentColor;
 }
 
+/* Score and lines, under the red lines */
+
+.stats {
+    display: flex;
+    gap: 40px;
+    margin-top: 28px;
+    padding-top: 14px;
+    border-top: 2px solid var(--ink);
+}
+
+.stats dt {
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.stats dd {
+    margin-top: 2px;
+    font-size: 56px;
+    line-height: 1;
+}
+
+.stats + .muted {
+    margin-top: 10px;
+}
+
+.my-record {
+    margin-top: 8px;
+    font-size: 13px;
+}
+
 /* ---------- Game over ---------- */
 
 .room-over {
@@ -502,9 +586,27 @@ button, input {
 }
 
 .finish {
-    margin: 20px 0 30px;
+    margin-top: 20px;
     font-weight: 600;
     font-size: 15px;
+}
+
+.final-score {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 8px 0 30px;
+    font-size: 15px;
+}
+
+.new-best {
+    padding: 2px 8px;
+    border: 2px solid var(--cream);
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
 }
 
 .room-over .button {
@@ -542,7 +644,8 @@ button, input {
         padding: 32px 16px;
     }
     .home {
-        padding: 32px 16px 0;
+        /* Room for the forest under the content, instead of over it */
+        padding: 32px 16px 300px;
     }
     .home-title {
         font-size: clamp(96px, 26vw, 216px);

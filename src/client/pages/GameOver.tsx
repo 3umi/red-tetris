@@ -3,6 +3,7 @@ import { PixelArt } from '../components/PixelArt';
 import { redForestLeft, redForestRight } from '../art/forest';
 import { useAppDispatch, useAppSelector } from '../hooks/hooks';
 import { startRequested } from '../store/roomSlice';
+import { formatScore } from '../scores/format';
 import { placeOf, ordinal, roundSize } from '../game/placing';
 import { OpponentList } from './Game';
 
@@ -10,6 +11,7 @@ export const GameOver = () => {
     const dispatch = useAppDispatch();
     const room = useAppSelector((state) => state.room);
     const game = useAppSelector((state) => state.game);
+    const { mine, newBest } = useAppSelector((state) => state.scores);
     const { me, host, winner } = room;
     // Count the round's players, not the room's: someone may have joined since it ended.
     const total = roundSize(room);
@@ -35,6 +37,12 @@ export const GameOver = () => {
                 <h1 className="display winner-title">{title}</h1>
                 <p className="finish">
                     {solo ? `You placed ${game.locks} ${game.locks === 1 ? 'piece' : 'pieces'}` : myPlace && `You finished ${ordinal(myPlace)} of ${total}`}
+                </p>
+                <p className="final-score">
+                    {`Score ${formatScore(game.score)}`}
+                    {newBest
+                        ? <span className="new-best">New best</span>
+                        : mine && <span className="muted">{`Best ${formatScore(mine.best)}`}</span>}
                 </p>
                 <button className="button button-wide" disabled={me !== host} onClick={() => dispatch(startRequested())}>
                     Restart game
