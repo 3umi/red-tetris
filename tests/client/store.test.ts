@@ -174,7 +174,7 @@ describe('socket middleware', () => {
             preloadedState: {
                 game: {
                     status: 'playing', board, queue: ['T', 'O', 'I', 'S', 'Z', 'J', 'L', 'T'], locks: 0, cleared: 0, penalty: 0, lastPenaltyFrom: null, score: 0, lines: 0,
-                    piece: { type: 'I', shape: [[0, 0, 1, 0], [0, 0, 1, 0], [0, 0, 1, 0], [0, 0, 1, 0]], x: 7, y: 0 },
+                    mode: 'classic', piece: { type: 'I', shape: [[0, 0, 1, 0], [0, 0, 1, 0], [0, 0, 1, 0], [0, 0, 1, 0]], x: 7, y: 0 },
                 },
             },
         });

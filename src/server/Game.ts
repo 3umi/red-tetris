@@ -1,5 +1,6 @@
 import { Piece } from './Piece';
 import { Player } from './Player';
+import type { GameMode } from '../shared/modes';
 
 export type JoinError = 'nameTaken' | 'gameStarted';
 export type StartError = 'notHost' | 'alreadyStarted';
@@ -13,6 +14,7 @@ export class Game {
     piece: Piece;
     lost: string[];
     lastWinner: string | null;
+    mode: GameMode;
 
     constructor(name: string) {
         this.name = name;
@@ -23,6 +25,7 @@ export class Game {
         this.piece = new Piece();
         this.lost = [];
         this.lastWinner = null;
+        this.mode = 'classic';
     }
 
     addPlayer(name: string, id: string): JoinError | null {
@@ -55,7 +58,7 @@ export class Game {
         }
     }
     
-    start(id: string): StartError | null {
+    start(id: string, mode: GameMode = 'classic'): StartError | null {
         if (this.host !== id) {
             return 'notHost';
         }
@@ -68,6 +71,7 @@ export class Game {
         this.lost = [];
         this.multiplayer = this.players.length > 1;
         this.started = true;
+        this.mode = mode;
         return null;
     }
     

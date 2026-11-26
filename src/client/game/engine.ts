@@ -1,4 +1,5 @@
 import { createBoard, isValid, lockPiece, clearLines, addPenalty, type Board } from '../../shared/board';
+import { GameMode } from '../../shared/modes';
 import { move, rotatePiece, createPiece, canSpawn, hardDrop } from '../../shared/moves';
 import type { Piece, PieceType } from '../../shared/pieces';
 
@@ -24,6 +25,7 @@ export type GameState = {
     // the last player standing.
     score: number;
     lines: number;
+    mode: GameMode;
 };
 
 export const initialGame: GameState = {
@@ -37,6 +39,7 @@ export const initialGame: GameState = {
     lastPenaltyFrom: null,
     score: 0,
     lines: 0,
+    mode: 'classic'
 };
 
 // Points for clearing 1 to 4 lines with one piece, and for each row a piece is dropped.
@@ -56,8 +59,8 @@ const spawn = (state: GameState): GameState => {
     return { ...state, queue, piece };
 };
 
-export const startGame = (queue: PieceType[]): GameState =>
-    spawn({ ...initialGame, status: 'playing', board: createBoard(), queue });
+export const startGame = (queue: PieceType[], mode: GameMode = 'classic'): GameState =>
+    spawn({ ...initialGame, status: 'playing', mode, board: createBoard(), queue });
 
 export const receivePieces = (state: GameState, types: PieceType[]): GameState =>
     spawn({ ...state, queue: [...state.queue, ...types] });

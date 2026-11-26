@@ -5,8 +5,12 @@ import { Server } from 'socket.io';
 import { Game } from './Game';
 import type { PieceType } from '../shared/pieces';
 import { BOARD_WIDTH, BOARD_HEIGHT } from '../shared/board';
+import { GAME_MODES, type GameMode } from '../shared/modes';
 
 const MAX_NAME_LENGTH = 32;
+
+const isGameMode = (value: unknown): value is GameMode =>
+  (GAME_MODES as unknown[]).includes(value);
 
 const isValidName = (value: unknown): value is string =>
   typeof value === 'string' && value.trim().length > 0 && value.length <= MAX_NAME_LENGTH;
@@ -90,16 +94,21 @@ export const createApp = ({ clientDir = DEFAULT_CLIENT_DIR }: { clientDir?: stri
       io.to(roomName).emit('roomUpdate', toRoomUpdate(game));
     });
 
-    socket.on('startGame', () => {
+    socket.on('startGame', (data: unknown) => {
       const game = currentGame();
       if (!game) {
         return;
       }
-      const error = game.start(socket.id);
+      const { mode } = (data ?? {}) as { mode?: unknown };
+      const chosen = mode === undefined ? 'classic' : mode;
+      if (!isGameMode(chosen)) {
+        return;
+      }
+      const error = game.start(socket.id, chosen);
       if (error) {
         return;
       }
-      io.to(game.name).emit('gameStarted', { pieces: piecesFrom(game, 0) });
+      io.to(game.name).emit('gameStarted', { pieces: piecesFrom(game, 0), mode: game.mode  });
     });
 
     socket.on('lost', () => {

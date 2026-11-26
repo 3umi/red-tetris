@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Board } from '../components/Board';
 import { PixelArt } from '../components/PixelArt';
 import { pelicanOnDark } from '../art/pelican';
@@ -5,6 +6,7 @@ import { createBoard } from '../../shared/board';
 import { useAppDispatch, useAppSelector } from '../hooks/hooks';
 import { startRequested } from '../store/roomSlice';
 import { describeRecord } from '../scores/format';
+import { GAME_MODES, type GameMode } from '../../shared/modes';
 
 // The pile shown on the lobby board in Design.pdf, as a hint of what is coming.
 const PILE = ['0000004400', '0003044000', '0073305500', '7773226550', '1111226660'];
@@ -25,6 +27,7 @@ export const Lobby = () => {
     const { room, me, host, players } = useAppSelector((state) => state.room);
     const mine = useAppSelector((state) => state.scores.mine);
     const isHost = me === host;
+    const [mode, setMode] = useState<GameMode>('classic');
 
     const tag = (name: string) => [name === host && 'Host', name === me && (name === host ? 'you' : 'You')]
         .filter(Boolean).join(', ');
@@ -45,7 +48,19 @@ export const Lobby = () => {
                     ))}
                 </ul>
                 <div className="spacer" />
-                <button className="button button-wide" disabled={!isHost} onClick={() => dispatch(startRequested())}>
+                <div className="modes">
+                    {GAME_MODES.map((option) => (
+                        <button
+                            key={option}
+                            className={`button mode ${option === mode ? 'mode-selected' : ''}`}
+                            disabled={!isHost}
+                            onClick={() => setMode(option)}
+                        >
+                            {option}
+                        </button>
+                    ))}
+                </div>
+                <button className="button button-wide" disabled={!isHost} onClick={() => dispatch(startRequested(mode))}>
                     Start game
                 </button>
                 <p className="muted start-note">Only the host can start</p>

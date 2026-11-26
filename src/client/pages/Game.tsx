@@ -53,6 +53,10 @@ export const Game = ({ onLeave }: { onLeave: () => void }) => {
                         <dt>Lines</dt>
                         <dd className="display" aria-label="Lines">{game.lines}</dd>
                     </div>
+                    <div>
+                        <dt>Mode</dt>
+                        <dd className="display stat-mode" aria-label="Mode">{game.mode}</dd>
+                    </div>
                 </dl>
                 {mine && <div className="muted">{`Your best ${formatScore(mine.best)}`}</div>}
                 <div className="spacer" />
