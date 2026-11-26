@@ -232,4 +232,27 @@ describe('Game', () => {
         expect(game.isOver()).toBe(false);
         expect(game.winner()).toBe(null);
     });
+
+    describe('mode', () => {
+        it('starts in classic mode', () => {
+            expect(new Game('room1').mode).toBe('classic');
+        });
+        it('stores the mode the host starts the round with', () => {
+            const game = gameWith(['Alice', 'Bob']);
+            game.start('id1', 'gravity');
+            expect(game.mode).toBe('gravity');
+        });
+        it('keeps the mode when someone else tries to start', () => {
+            const game = gameWith(['Alice', 'Bob']);
+            expect(game.start('id2', 'invisible')).toBe('notHost');
+            expect(game.mode).toBe('classic');
+        });
+        it('goes back to classic when the next round starts without a mode', () => {
+            const game = gameWith(['Alice']);
+            game.start('id1', 'gravity');
+            game.playerLost('id1');
+            game.start('id1');
+            expect(game.mode).toBe('classic');
+        });
+    });
 });

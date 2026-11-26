@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
     initialGame, startGame, receivePieces, tick, drop, shift, rotate, receivePenalty, softDrop, type GameState,
+    fallInterval, FALL_INTERVAL_MS, FALL_STEP_MS, LINES_PER_LEVEL, MIN_FALL_MS,
 } from '../../src/client/game/engine';
+import type { GameMode } from '../../src/shared/modes';
 import { createBoard, fullRow, penaltyRow, BOARD_HEIGHT } from '../../src/shared/board';
 import { CELL } from '../../src/shared/pieces';
 import { createPiece, hardDrop } from '../../src/shared/moves';
@@ -194,5 +196,32 @@ describe('score', () => {
     });
     it('does nothing for a soft drop when no game is running', () => {
         expect(softDrop(initialGame)).toBe(initialGame);
+    });
+});
+
+describe('game modes', () => {
+    it('starts in classic mode unless a mode is given', () => {
+        expect(initialGame.mode).toBe('classic');
+        expect(startGame(['T']).mode).toBe('classic');
+        expect(startGame(['T'], 'gravity').mode).toBe('gravity');
+    });
+});
+
+describe('fallInterval', () => {
+    const after = (mode: GameMode, lines: number): GameState => ({ ...startGame(['T'], mode), lines });
+
+    it('keeps a constant speed outside gravity mode', () => {
+        expect(fallInterval(after('classic', 0))).toBe(FALL_INTERVAL_MS);
+        expect(fallInterval(after('classic', 40))).toBe(FALL_INTERVAL_MS);
+        expect(fallInterval(after('invisible', 40))).toBe(FALL_INTERVAL_MS);
+    });
+    it('falls one step faster every LINES_PER_LEVEL lines in gravity mode', () => {
+        expect(fallInterval(after('gravity', 0))).toBe(FALL_INTERVAL_MS);
+        expect(fallInterval(after('gravity', LINES_PER_LEVEL - 1))).toBe(FALL_INTERVAL_MS);
+        expect(fallInterval(after('gravity', LINES_PER_LEVEL))).toBe(FALL_INTERVAL_MS - FALL_STEP_MS);
+        expect(fallInterval(after('gravity', LINES_PER_LEVEL * 2 + 1))).toBe(FALL_INTERVAL_MS - 2 * FALL_STEP_MS);
+    });
+    it('never falls faster than MIN_FALL_MS', () => {
+        expect(fallInterval(after('gravity', 1000))).toBe(MIN_FALL_MS);
     });
 });

@@ -152,10 +152,18 @@ describe('socket middleware', () => {
         server.serverSends('joinError', 'Error: oumaima name already exists in pelicans');
         expect(store.getState().room.error).toContain('already exists');
     });
-    it('asks the server to start a round', () => {
+    it('asks the server to start a round, in classic mode by default', () => {
         const { store, server } = setup();
         store.dispatch(startRequested());
-        expect(server.sent('startGame')).toHaveLength(1);
+        store.dispatch(startRequested('gravity'));
+        expect(server.sent('startGame')).toEqual([{ mode: 'classic' }, { mode: 'gravity' }]);
+    });
+    it('plays the mode the server starts the round with', () => {
+        const { store, server } = setup();
+        server.serverSends('gameStarted', { pieces: ['T', 'O'], mode: 'invisible' });
+        expect(store.getState().game.mode).toBe('invisible');
+        server.serverSends('gameStarted', { pieces: ['T', 'O'] });
+        expect(store.getState().game.mode).toBe('classic');
     });
     it('reports the spectrum when a piece locks, without cleared lines for a plain drop', () => {
         const { store, server } = setup();
