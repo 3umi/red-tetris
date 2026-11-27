@@ -2,7 +2,7 @@ import { Board } from '../components/Board';
 import { Spectrum } from '../components/Spectrum';
 import { formatScore } from '../scores/format';
 import { useAppSelector, useControls, useGravity } from '../hooks/hooks';
-import { fallInterval } from '../game/engine';
+import { fallInterval, visibleBoard } from '../game/engine';
 import type { Opponent } from '../store/roomSlice';
 
 const STATUS_LABEL = { playing: 'Playing', out: 'Out', winner: 'Winner' } as const;
@@ -65,7 +65,7 @@ export const Game = ({ onLeave }: { onLeave: () => void }) => {
             </section>
             <section className="centre">
                 <div className="centre-status">{game.status === 'lost' ? 'You are out' : ''}</div>
-                <Board board={game.board} piece={game.piece} />
+                <Board board={visibleBoard(game)} piece={game.piece} />
             </section>
             <section className="side side-right">
                 <OpponentList opponents={Object.values(opponents)} />

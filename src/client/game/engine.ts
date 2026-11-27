@@ -1,5 +1,4 @@
-import { stat } from 'node:fs';
-import { createBoard, isValid, lockPiece, clearLines, addPenalty, type Board } from '../../shared/board';
+import { createBoard, isValid, lockPiece, clearLines, addPenalty, emptyRow, PENALTY, BOARD_HEIGHT, type Board } from '../../shared/board';
 import type { GameMode } from '../../shared/modes';
 import { move, rotatePiece, createPiece, canSpawn, hardDrop } from '../../shared/moves';
 import type { Piece, PieceType } from '../../shared/pieces';
@@ -143,4 +142,17 @@ export const fallInterval = (state: GameState): number => {
     }
     const level = Math.floor(state.lines / LINES_PER_LEVEL)
     return Math.max(MIN_FALL_MS, FALL_INTERVAL_MS - level * FALL_STEP_MS)
+}
+
+export const visibleBoard = (state: GameState): Board => {
+    if (state.mode !== 'invisible') {
+        return state.board;
+    }
+    const isPenalty = (row: number[]) => row.every((cell) => cell === PENALTY);
+    const newBoard: Board = state.board.filter((row) => isPenalty(row));
+    const add = state.board.length - newBoard.length
+    for (let i = 0; i < add; i++) {
+        newBoard.unshift(emptyRow());
+    }
+    return newBoard
 }
