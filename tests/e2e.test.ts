@@ -175,7 +175,9 @@ describe('end to end', () => {
         await Promise.all([alice, bob].map((store) => until(store, (state) => state.room.error === CONNECTION_LOST)));
 
         server = await listen(port);
-        await Promise.all([alice, bob].map((store) => until(store, (state) => state.room.players.length === 2)));
+        // Wait for the new lobby: while offline the room still lists the old players.
+        const rejoined = (state: RootState) => state.room.phase === 'lobby' && state.room.error === null && state.room.players.length === 2;
+        await Promise.all([alice, bob].map((store) => until(store, rejoined)));
         [alice, bob].forEach((store) => {
             expect(store.getState().room).toMatchObject({ phase: 'lobby', error: null });
             expect([...store.getState().room.players].sort()).toEqual(['alice', 'bob']);
