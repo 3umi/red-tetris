@@ -99,6 +99,18 @@ describe('room', () => {
         act(() => server.serverSends('gameStarted', { pieces: ['T', 'O'], mode: 'gravity' }));
         expect(screen.getByLabelText('Mode').textContent).toBe('gravity');
     });
+    it('hides landed pieces in invisible mode, but not the falling one or red lines', () => {
+        const { store, server } = joinAsHost();
+        act(() => server.serverSends('gameStarted', { pieces: ['O', 'T', 'I'], mode: 'invisible' }));
+        const drawn = () => screen.getByRole('grid', { name: 'Your board' })
+            .querySelectorAll('[data-cell]:not([data-cell="0"])').length;
+        expect(drawn()).toBe(4);
+        key(' ');
+        expect(store.getState().game.locks).toBe(1);
+        expect(drawn()).toBe(4);
+        act(() => server.serverSends('penalty', { lines: 1, from: 'sara' }));
+        expect(drawn()).toBe(4 + 10);
+    });
     it('does not let other players pick the mode', () => {
         const app = renderApp('/pelicans/sara');
         act(() => app.connections.last().serverSends('roomUpdate', { host: 'oumaima', players: ['oumaima', 'sara'] }));
