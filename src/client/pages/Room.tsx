@@ -19,6 +19,21 @@ export const Room = () => {
             dispatch(left());
         };
     }, [room, player, dispatch]);
+    
+    useEffect(() => {
+        const onHide = () => dispatch(left());
+        const onShow = (event: PageTransitionEvent) => {
+            if (event.persisted) {
+                dispatch(joinRequested({ room, player }));
+            }
+        };
+        window.addEventListener('pagehide', onHide);
+        window.addEventListener('pageshow', onShow);
+        return () => {
+            window.removeEventListener('pagehide', onHide);
+            window.removeEventListener('pageshow', onShow);
+        };
+    }, [room, player, dispatch]);
 
     const leave = () => navigate('/');
 

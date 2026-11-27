@@ -42,7 +42,7 @@ export const createApp = ({ clientDir = DEFAULT_CLIENT_DIR }: { clientDir?: stri
     res.sendStatus(404);
   });
 
-  app.get('/*path', (_req, res) => {
+  app.get('/{*path}', (_req, res) => {
     res.sendFile(join(clientDir, 'index.html'));
   });
 
