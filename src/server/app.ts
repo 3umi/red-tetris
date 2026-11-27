@@ -35,10 +35,14 @@ export const createApp = ({ clientDir = DEFAULT_CLIENT_DIR }: { clientDir?: stri
   const io = new Server(httpServer);
   const rooms = new Map<string, Game>();
 
-  // The built client (see vite.config.ts): index.html, bundle.js and assets.
+  // The built client 
   app.use(express.static(clientDir, { index: 'index.html' }));
-  // Room URLs are routes of the single-page app, so they all get index.html.
-  app.get('/:room/:player', (req, res) => {
+
+  app.get('/assets/*path', (_req, res) => {
+    res.sendStatus(404);
+  });
+
+  app.get('/{*path}', (_req, res) => {
     res.sendFile(join(clientDir, 'index.html'));
   });
 
