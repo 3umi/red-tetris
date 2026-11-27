@@ -22,6 +22,10 @@ export const createFakeSocket = () => {
             state.connected = false;
             return socket;
         },
+        connect: () => {
+            state.connected = true;
+            return socket;
+        },
     };
 
     return {

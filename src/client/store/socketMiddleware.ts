@@ -4,7 +4,7 @@ import { getSpectrum } from '../../shared/board';
 import type { ClientToServer, ServerToClient } from './protocol';
 import {
     joinRequested, joinFailed, roomUpdated, startRequested, roundStarted,
-    spectrumUpdated, playerOut, roundOver, left,
+    spectrumUpdated, playerOut, roundOver, left, connectionLost, reconnected,
 } from './roomSlice';
 import { started, piecesReceived, penaltyReceived, reset } from './gameSlice';
 import type { GameState } from '../game/engine';
@@ -39,6 +39,37 @@ export const createSocketMiddleware = (connect: () => GameSocket): Middleware<ob
         socket.on('penalty', (data) => store.dispatch(penaltyReceived(data)));
         socket.on('playerOut', ({ name }) => store.dispatch(playerOut(name)));
         socket.on('gameOver', (data) => store.dispatch(roundOver(data)));
+
+        // After a dropped connection or a server restart, socket.io reconnects by itself,
+        // but the server no longer has this player in the room. Show that the connection
+        // is lost, then join the same room again once it is back. A round still running
+        // refuses the join, and that message replaces this one.
+        let lost = false;
+        socket.on('disconnect', (reason) => {
+            // Our own disconnect (leaving, or joining another room), or a page that was
+            // already refused: there is nothing to go back to.
+            if (reason === 'io client disconnect' || store.getState().room.error) {
+                return;
+            }
+            lost = true;
+            store.dispatch(reset());
+            store.dispatch(connectionLost());
+            // socket.io only reconnects by itself when the server didn't close the connection.
+            if (reason === 'io server disconnect') {
+                socket.connect();
+            }
+        });
+        socket.on('connect', () => {
+            if (!lost) {
+                return;
+            }
+            lost = false;
+            store.dispatch(reconnected());
+            const { room, me } = store.getState().room;
+            if (room !== null && me !== null) {
+                socket.emit('joinRoom', { room, player: me });
+            }
+        });
     };
 
     // Tell the server what changed on our own board after an action.
