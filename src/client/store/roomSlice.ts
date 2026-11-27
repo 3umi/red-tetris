@@ -39,6 +39,9 @@ export const initialRoom: RoomState = {
 
 const emptySpectrum = (): number[] => Array(10).fill(0);
 
+// Shown on the home page while socket.io tries to reconnect.
+export const CONNECTION_LOST = 'Connection lost. Trying to reconnect...';
+
 const roomSlice = createSlice({
     name: 'room',
     initialState: initialRoom,
@@ -106,11 +109,15 @@ const roomSlice = createSlice({
             };
         },
         left: () => initialRoom,
+        // The connection dropped: the server has already removed this player from the room.
+        connectionLost: (state) => ({ ...state, error: CONNECTION_LOST }),
+        // Back online: start over in the same room, as if the page had just opened.
+        reconnected: (state) => ({ ...initialRoom, room: state.room, me: state.me }),
     },
 });
 
 export const {
     joinRequested, joinFailed, roomUpdated, startRequested, roundStarted, spectrumUpdated,
-    playerOut, roundOver, left,
+    playerOut, roundOver, left, connectionLost, reconnected,
 } = roomSlice.actions;
 export default roomSlice.reducer;

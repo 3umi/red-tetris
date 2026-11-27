@@ -8,10 +8,11 @@ import { join as joinPath } from 'node:path';
 import { io } from 'socket.io-client';
 import { createApp } from '../src/server/app';
 import { createStore, type AppStore, type RootState } from '../src/client/store';
-import { joinRequested, startRequested, left } from '../src/client/store/roomSlice';
+import { joinRequested, startRequested, left, CONNECTION_LOST } from '../src/client/store/roomSlice';
 import { hardDropped, movedLeft, movedRight, rotated } from '../src/client/store/gameSlice';
 
 let server: ReturnType<typeof createApp>;
+let clientDir: string;
 let url: string;
 let stores: AppStore[];
 
@@ -21,12 +22,17 @@ const BAG = ['O', 'T', 'S', 'Z', 'J', 'L', 'I'];
 beforeEach(async () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
     stores = [];
-    const clientDir = mkdtempSync(joinPath(tmpdir(), 'red-tetris-e2e-'));
+    clientDir = mkdtempSync(joinPath(tmpdir(), 'red-tetris-e2e-'));
     writeFileSync(joinPath(clientDir, 'index.html'), '<div id="root"></div>');
-    server = createApp({ clientDir });
-    await new Promise<void>((resolve) => server.httpServer.listen(0, resolve));
+    server = await listen(0);
     url = `http://localhost:${(server.httpServer.address() as AddressInfo).port}`;
 });
+
+const listen = async (port: number) => {
+    const app = createApp({ clientDir });
+    await new Promise<void>((resolve) => app.httpServer.listen(port, resolve));
+    return app;
+};
 
 afterEach(async () => {
     stores.forEach((store) => store.dispatch(left()));
@@ -35,7 +41,9 @@ afterEach(async () => {
 });
 
 const player = () => {
-    const store = createStore({ connect: () => io(url, { transports: ['websocket'], forceNew: true }) });
+    // Retry quickly after a dropped connection, so the reconnect tests stay fast.
+    const connect = () => io(url, { transports: ['websocket'], forceNew: true, reconnectionDelay: 10, reconnectionDelayMax: 20 });
+    const store = createStore({ connect });
     stores.push(store);
     return store;
 };
@@ -157,5 +165,39 @@ describe('end to end', () => {
         await until(bob, (state) => state.room.host === 'bob' && state.room.phase === 'over');
         expect(bob.getState().room.winner).toBe('bob');
         expect(bob.getState().room.opponents.alice.status).toBe('out');
+    });
+
+    it('puts everyone back in their room after the server restarts', async () => {
+        const alice = await join('pelicans', 'alice');
+        const bob = await join('pelicans', 'bob');
+        const { port } = server.httpServer.address() as AddressInfo;
+        await server.io.close();
+        await Promise.all([alice, bob].map((store) => until(store, (state) => state.room.error === CONNECTION_LOST)));
+
+        server = await listen(port);
+        // Wait for the new lobby: while offline the room still lists the old players.
+        const rejoined = (state: RootState) => state.room.phase === 'lobby' && state.room.error === null && state.room.players.length === 2;
+        await Promise.all([alice, bob].map((store) => until(store, rejoined)));
+        [alice, bob].forEach((store) => {
+            expect(store.getState().room).toMatchObject({ phase: 'lobby', error: null });
+            expect([...store.getState().room.players].sort()).toEqual(['alice', 'bob']);
+        });
+    });
+
+    it('tells a player who dropped out mid-round that the round is still running', async () => {
+        const alice = await join('pelicans', 'alice');
+        const bob = await join('pelicans', 'bob');
+        const carol = await join('pelicans', 'carol');
+        alice.dispatch(startRequested());
+        await Promise.all([alice, bob, carol].map((store) => until(store, (state) => state.game.status === 'playing')));
+
+        // Cut bob's connection from the server's side. Alice and carol keep playing, so
+        // the server refuses bob's new join.
+        const [, bobSocket] = server.io.sockets.sockets.values();
+        bobSocket.conn.close();
+        await until(bob, (state) => state.room.error === 'Error: pelicans has already started');
+        expect(bob.getState().game.status).toBe('idle');
+        await until(alice, (state) => !state.room.players.includes('bob'));
+        expect(alice.getState().room.phase).toBe('playing');
     });
 });
