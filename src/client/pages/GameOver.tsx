@@ -44,7 +44,7 @@ export const GameOver = () => {
                         ? <span className="new-best">New best</span>
                         : mine && <span className="muted">{`Best ${formatScore(mine.best)}`}</span>}
                 </p>
-                <button className="button button-wide" disabled={me !== host} onClick={() => dispatch(startRequested())}>
+                <button className="button button-wide" disabled={me !== host} onClick={() => dispatch(startRequested(game.mode))}>
                     Restart game
                 </button>
                 <p className="muted start-note">Only the host can restart</p>

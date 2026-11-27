@@ -2,6 +2,7 @@ import { Board } from '../components/Board';
 import { Spectrum } from '../components/Spectrum';
 import { formatScore } from '../scores/format';
 import { useAppSelector, useControls, useGravity } from '../hooks/hooks';
+import { fallInterval, visibleBoard } from '../game/engine';
 import type { Opponent } from '../store/roomSlice';
 
 const STATUS_LABEL = { playing: 'Playing', out: 'Out', winner: 'Winner' } as const;
@@ -28,7 +29,7 @@ export const Game = ({ onLeave }: { onLeave: () => void }) => {
     const game = useAppSelector((state) => state.game);
     const mine = useAppSelector((state) => state.scores.mine);
     const playing = game.status === 'playing';
-    useGravity(playing);
+    useGravity(playing, fallInterval(game));
     useControls(playing);
 
     // Count from the room's current players: someone who lost and then left is in
@@ -53,6 +54,10 @@ export const Game = ({ onLeave }: { onLeave: () => void }) => {
                         <dt>Lines</dt>
                         <dd className="display" aria-label="Lines">{game.lines}</dd>
                     </div>
+                    <div>
+                        <dt>Mode</dt>
+                        <dd className="display stat-mode" aria-label="Mode">{game.mode}</dd>
+                    </div>
                 </dl>
                 {mine && <div className="muted">{`Your best ${formatScore(mine.best)}`}</div>}
                 <div className="spacer" />
@@ -60,7 +65,7 @@ export const Game = ({ onLeave }: { onLeave: () => void }) => {
             </section>
             <section className="centre">
                 <div className="centre-status">{game.status === 'lost' ? 'You are out' : ''}</div>
-                <Board board={game.board} piece={game.piece} />
+                <Board board={visibleBoard(game)} piece={game.piece} />
             </section>
             <section className="side side-right">
                 <OpponentList opponents={Object.values(opponents)} />

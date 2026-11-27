@@ -167,6 +167,32 @@ describe('disconnect', () => {
             await error;
             expect(server.rooms.get('r')?.started).toBe(false);
         });
+        it('sends the chosen mode with gameStarted', async () => {
+            const a = await client();
+            const b = await client();
+            await join(a, 'r', 'alice');
+            await join(b, 'r', 'bob');
+            const started = next<{ mode: string }>(b, 'gameStarted');
+            a.emit('startGame', { mode: 'gravity' });
+            expect((await started).mode).toBe('gravity');
+            expect(server.rooms.get('r')?.mode).toBe('gravity');
+        });
+        it('plays classic when no mode is sent', async () => {
+            const a = await client();
+            await join(a, 'r', 'alice');
+            const started = next<{ mode: string }>(a, 'gameStarted');
+            a.emit('startGame');
+            expect((await started).mode).toBe('classic');
+        });
+        it('ignores startGame with an unknown mode', async () => {
+            const a = await client();
+            await join(a, 'r', 'alice');
+            const error = next<string>(a, 'joinError');
+            a.emit('startGame', { mode: 'banana' });
+            a.emit('joinRoom', { room: 'r', player: 'alice' });
+            await error;
+            expect(server.rooms.get('r')?.started).toBe(false);
+        });
     });
     describe('lost', () => {
         it('tells the room who is out and who won', async () => {

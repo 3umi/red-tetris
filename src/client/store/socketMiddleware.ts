@@ -27,11 +27,11 @@ export const createSocketMiddleware = (connect: () => GameSocket): Middleware<ob
     const listen = (socket: GameSocket) => {
         socket.on('roomUpdate', (data) => store.dispatch(roomUpdated(data)));
         socket.on('joinError', (message) => store.dispatch(joinFailed(message)));
-        socket.on('gameStarted', ({ pieces }) => {
+        socket.on('gameStarted', (data) => {
             requested.splice(0);
             // Replace the old game first: the last winner's game is still 'playing', and
             // reporting on it would ask the new round for pieces at the old index.
-            store.dispatch(started(pieces));
+            store.dispatch(started(data));
             store.dispatch(roundStarted());
         });
         socket.on('pieces', ({ pieces }) => store.dispatch(piecesReceived(pieces)));
@@ -67,7 +67,7 @@ export const createSocketMiddleware = (connect: () => GameSocket): Middleware<ob
             listen(socket);
             socket.emit('joinRoom', action.payload);
         } else if (startRequested.match(action)) {
-            current()?.emit('startGame');
+            current()?.emit('startGame', { mode: action.payload ?? 'classic' });
         } else if (left.match(action)) {
             sockets.splice(0).forEach((socket) => socket.disconnect());
             store.dispatch(reset());

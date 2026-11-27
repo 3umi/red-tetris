@@ -338,6 +338,27 @@ button, input {
     margin-top: 12px;
 }
 
+.modes {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.mode {
+    flex: 1;
+    padding: 0 8px;
+    border: 2px solid var(--ink);
+    background: transparent;
+    color: var(--ink);
+    font-size: 14px;
+    text-transform: capitalize;
+}
+
+.mode-selected {
+    background: var(--ink);
+    color: var(--cream);
+}
+
 .controls-title {
     font-size: 38px;
     margin-bottom: 14px;
@@ -541,6 +562,11 @@ button, input {
 
 .stats + .muted {
     margin-top: 10px;
+}
+
+.stats .stat-mode {
+    font-size: 32px;
+    text-transform: capitalize;
 }
 
 .my-record {

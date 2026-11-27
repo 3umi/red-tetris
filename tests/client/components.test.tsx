@@ -6,12 +6,13 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { App } from '../../src/client/App';
 import { createStore, type RootState } from '../../src/client/store';
 import { initialRoom } from '../../src/client/store/roomSlice';
-import { initialGame } from '../../src/client/game/engine';
+import { initialGame, FALL_INTERVAL_MS } from '../../src/client/game/engine';
 import { GameOver } from '../../src/client/pages/GameOver';
 import { PixelArt } from '../../src/client/components/PixelArt';
 import { Spectrum } from '../../src/client/components/Spectrum';
 import { Board } from '../../src/client/components/Board';
-import { FALL_INTERVAL_MS } from '../../src/client/hooks/hooks';
+import { useGravity } from '../../src/client/hooks/hooks';
+import { started } from '../../src/client/store/gameSlice';
 import { createBoard } from '../../src/shared/board';
 import { fakeConnections } from './fakeSocket';
 import { createScoreBook, type ScoreBook } from '../../src/client/scores/scoreBook';
@@ -87,6 +88,35 @@ describe('room', () => {
         expect(screen.getByRole('button', { name: 'Start game' })).toHaveProperty('disabled', true);
         expect(screen.getByText('You')).toBeTruthy();
     });
+    it('lets the host pick a mode, and starts the round with it', () => {
+        const { server } = joinAsHost();
+        expect(screen.getByRole('button', { name: 'classic' }).className).toContain('mode-selected');
+        fireEvent.click(screen.getByRole('button', { name: 'gravity' }));
+        expect(screen.getByRole('button', { name: 'gravity' }).className).toContain('mode-selected');
+        expect(screen.getByRole('button', { name: 'classic' }).className).not.toContain('mode-selected');
+        fireEvent.click(screen.getByRole('button', { name: 'Start game' }));
+        expect(server.sent('startGame')).toEqual([{ mode: 'gravity' }]);
+        act(() => server.serverSends('gameStarted', { pieces: ['T', 'O'], mode: 'gravity' }));
+        expect(screen.getByLabelText('Mode').textContent).toBe('gravity');
+    });
+    it('hides landed pieces in invisible mode, but not the falling one or red lines', () => {
+        const { store, server } = joinAsHost();
+        act(() => server.serverSends('gameStarted', { pieces: ['O', 'T', 'I'], mode: 'invisible' }));
+        const drawn = () => screen.getByRole('grid', { name: 'Your board' })
+            .querySelectorAll('[data-cell]:not([data-cell="0"])').length;
+        expect(drawn()).toBe(4);
+        key(' ');
+        expect(store.getState().game.locks).toBe(1);
+        expect(drawn()).toBe(4);
+        act(() => server.serverSends('penalty', { lines: 1, from: 'sara' }));
+        expect(drawn()).toBe(4 + 10);
+    });
+    it('does not let other players pick the mode', () => {
+        const app = renderApp('/pelicans/sara');
+        act(() => app.connections.last().serverSends('roomUpdate', { host: 'oumaima', players: ['oumaima', 'sara'] }));
+        ['classic', 'gravity', 'invisible'].forEach((mode) =>
+            expect(screen.getByRole('button', { name: mode })).toHaveProperty('disabled', true));
+    });
     it('shows the home page with the error when joining fails', () => {
         const app = renderApp('/pelicans/oumaima');
         act(() => app.connections.last().serverSends('joinError', 'Error: oumaima name already exists in pelicans'));
@@ -136,7 +166,7 @@ describe('room', () => {
         expect(screen.getByText('You finished 1st of 2')).toBeTruthy();
         expect(screen.getByText('2nd')).toBeTruthy();
         fireEvent.click(screen.getByRole('button', { name: 'Restart game' }));
-        expect(server.sent('startGame')).toHaveLength(1);
+        expect(server.sent('startGame')).toEqual([{ mode: 'classic' }]);
         act(() => server.serverSends('gameStarted', { pieces: ['O'] }));
         expect(screen.getByText('2 of 2 still playing')).toBeTruthy();
     });
@@ -299,5 +329,35 @@ describe('drawing', () => {
         expect(container.querySelectorAll('.cell')).toHaveLength(200);
         expect(container.querySelectorAll('.cell-2')).toHaveLength(4);
         expect(container.querySelector('table')).toBe(null);
+    });
+});
+
+describe('useGravity', () => {
+    const Gravity = ({ delay }: { delay: number }) => {
+        useGravity(true, delay);
+        return null;
+    };
+
+    it('restarts its timer when the delay changes', () => {
+        vi.useFakeTimers();
+        const store = createStore({ connect: fakeConnections().connect, scoreBook: createScoreBook(null) });
+        store.dispatch(started({ pieces: ['T', 'O'], mode: 'gravity' }));
+        const y = () => store.getState().game.piece?.y;
+        const view = render(<Provider store={store}><Gravity delay={700} /></Provider>);
+
+        act(() => {
+            vi.advanceTimersByTime(700);
+        });
+        expect(y()).toBe(1);
+
+        view.rerender(<Provider store={store}><Gravity delay={300} /></Provider>);
+        act(() => {
+            vi.advanceTimersByTime(299);
+        });
+        expect(y()).toBe(1);
+        act(() => {
+            vi.advanceTimersByTime(1);
+        });
+        expect(y()).toBe(2);
     });
 });
