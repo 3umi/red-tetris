@@ -25,6 +25,18 @@ Open `http://localhost:3000/<room>/<name>` in a few browser windows, for example
 | ↓ | Soft drop |
 | Space | Hard drop |
 
+### Scoring
+
+Each round starts from 0. Red lines never take points away.
+
+| Move | Points |
+|---|---|
+| Clear 1, 2, 3 or 4 lines with one piece | 100, 300, 500 or 800 |
+| Soft drop (↓) | 1 per row |
+| Hard drop (Space) | 2 per row |
+
+The game screen shows your score and lines. When a round ends, the browser saves your best score, rounds played and wins under your name, in `localStorage`. They show in the lobby, on the game-over screen (with a "New best" badge), and as a top 5 on the home page, under "Best on this device". They stay on that browser only.
+
 ### Configuration
 
 Settings come from a `.env` file at the repo root, which is gitignored. Copy `.env.example` to start.
@@ -67,12 +79,19 @@ tests/      Unit tests per module, plus end-to-end tests (tests/e2e.test.ts)
 - `Game` is one room: its players, host, round state and results.
 - `Player` is one connection in a room.
 - `Piece` is the round's piece sequence, extended on demand. Every player reads from the same list, so everyone gets the same pieces in the same order.
-- `app.ts` serves the built client for `/` and `/:room/:player`, and maps socket events onto these classes.
+- `app.ts` maps socket events onto these classes, and serves the built client: `index.html` for every page URL, and a 404 for missing files under `/assets/`.
 
 **Client** (`src/client`): written without `this`, using function components, hooks and closures. Layouts use CSS grid and flexbox, with no tables, canvas or SVG.
 - `game/engine.ts`: pure state functions for one player's game (spawn, move, rotate, tick, drop, penalties).
-- `store/`: Redux Toolkit slices for the room and the game, plus a socket middleware that turns server messages into actions and reports the player's board back to the server.
-- `pages/`: home, lobby, game and game-over screens, picked by the round's phase. The room and name come from the URL through React Router.
+- `store/`: Redux Toolkit slices for the room, the game and the scores. A socket middleware turns server messages into actions and reports the player's board back to the server, and a score middleware saves each round's result.
+- `scores/`: the score book that saves results per name in `localStorage`. The rest of the client only uses its `get`, `record` and `top` functions, so a server-side leaderboard can replace it later.
+- `pages/`: home, lobby, game and game-over screens, picked by the round's phase. The room and name come from the URL through React Router. Unknown URLs redirect to the home page.
+
+### Connections and navigation
+
+- **Dropped connection or server restart:** the game stops and the home page says "Connection lost. Trying to reconnect...". socket.io reconnects by itself, then the client joins the same room again. If a round is running there, the usual "has already started" message shows instead.
+- **Back:** the page leaves the room on `pagehide`, so the server knows right away, and a new host is picked if needed.
+- **Forward:** when the browser restores the page from its cache, it joins the room again instead of showing the old screen.
 
 ## Network protocol
 
@@ -101,4 +120,4 @@ When a round ends, the room goes back to waiting: new players may join, and the 
 
 - **Shared and server:** unit tests for the board, pieces, moves and each class, plus socket tests with real socket.io clients against the server.
 - **Client:** the engine and reducers are tested directly. The middleware is tested against a fake socket, and the pages in jsdom with Testing Library.
-- **End to end:** `tests/e2e.test.ts` runs real client stores against the real server. It covers joining, the host-only start, identical pieces, refusing late joiners, a two-line clear sending one red line, a round ending and restarting, and the host leaving. It stubs `Math.random`, so the piece order is fixed.
+- **End to end:** `tests/e2e.test.ts` runs real client stores against the real server. It covers joining, the host-only start, identical pieces, refusing late joiners, a two-line clear sending one red line, a round ending and restarting, the host leaving, rejoining after a server restart, and a player whose connection drops mid-round. It stubs `Math.random`, so the piece order is fixed.
